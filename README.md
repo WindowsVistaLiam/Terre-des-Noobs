@@ -108,6 +108,8 @@ Puis mettre `DEMO_MODE=false` et `DATABASE_URL=postgresql://postgres:postgres@lo
 
 ## Déployer sur Railway avec GitHub
 
+Le [guide Railway pas à pas](docs/RAILWAY.md) décrit la création des deux services, le passage du local au cloud et les erreurs courantes. Le fichier [railway.variables.example](railway.variables.example) contient les variables à copier dans le **Raw Editor** du service bot.
+
 Dépôt : [WindowsVistaLiam/Terre-des-Noobs](https://github.com/WindowsVistaLiam/Terre-des-Noobs).
 
 1. Créer un projet Railway et ajouter un service **PostgreSQL**.

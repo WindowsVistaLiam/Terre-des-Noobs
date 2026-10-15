@@ -1,0 +1,10 @@
+# A coller dans Variables > Raw Editor du service BOT sur Railway.
+# Remplacer les trois valeurs Discord par celles du .env local.
+# Le service de base doit s'appeler Postgres pour cette reference.
+DISCORD_TOKEN=REMPLACER_PAR_LE_TOKEN_DU_BOT
+DISCORD_CLIENT_ID=REMPLACER_PAR_APPLICATION_ID
+DISCORD_GUILD_ID=REMPLACER_PAR_ID_DU_SERVEUR
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+NODE_ENV=production
+DEMO_MODE=false
+REGISTER_COMMANDS=true
