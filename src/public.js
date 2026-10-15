@@ -24,6 +24,8 @@ export async function publicProfile(game, targetId) {
         raceId: p.raceId,
         classId: p.classId,
         level: p.level,
+        title: p.customization?.title ?? "",
+        bio: p.customization?.bio ?? "",
         stats: statsOf(p),
         guildName: guild?.name,
         location: p.location === "base" ? "Au refuge" : ZONES[p.zone].name,

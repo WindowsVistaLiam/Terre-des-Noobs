@@ -20,6 +20,7 @@ import { uiId, publicId } from "./commands.js";
 import { RACE_COLORS, SOCIAL_TYPES } from "./social-content.js";
 import { buildSocialView } from "./social-views.js";
 import { buildPublicView } from "./public-views.js";
+import { DEFAULT_PORTRAIT, enemyPortrait } from "./portraits.js";
 
 const slotName = { weapon: "Arme", armor: "Armure", charm: "Talisman" };
 const chapterNames = {
@@ -240,6 +241,8 @@ export function buildView(result, owner) {
     subtitle: "Les routes se souviennent de vos pas.",
     tone: "gold",
     cards: [],
+    portrait: result.appearance?.portrait ?? DEFAULT_PORTRAIT,
+    banner: result.appearance?.banner,
     background:
       SOCIAL_TYPES.has(result.type) ||
       [
@@ -389,6 +392,57 @@ export function buildView(result, owner) {
     return { screen, components };
   }
   switch (result.type) {
+    case "customize": {
+      const c = p.customization;
+      screen.title = "Personnalise ton personnage";
+      screen.subtitle = `${p.name} · portrait, bannière et histoire`;
+      screen.cards = [
+        card(
+          c.title || "Ton titre ou ta devise",
+          c.bio ||
+            "Raconte l’histoire de ton héros. Ton titre et ta description seront visibles sur ton profil public.",
+        ),
+        card(
+          "Ton portrait",
+          `${c.portrait ? "Portrait personnel enregistré." : "Portrait d’aventurier par défaut."}\nIl apparaît en haut à droite des réponses. Choisis une image carrée ; le recadrage est centré.`,
+        ),
+        card(
+          "Ta bannière",
+          `${c.banner ? "Bannière personnelle enregistrée." : "Décor de Brumeterre par défaut."}\nChoisis une image large, idéalement au format 4:1. Elle habille l’en-tête de ton profil.`,
+        ),
+        card(
+          "Importer tes images",
+          "Envoie un fichier directement dans le formulaire Discord : PNG, JPG ou WebP fixe, 5 Mo maximum, 4096 pixels par côté au maximum. Les images restent sauvegardées après redémarrage.",
+        ),
+      ];
+      push(
+        row(
+          btn("Changer mon portrait", "form", ["portraitUpload"]),
+          btn("Changer ma bannière", "form", ["bannerUpload"]),
+          btn("Titre et description…", "form", ["profileText"]),
+        ),
+      );
+      push(
+        row(
+          btn("Retirer le portrait", "do", ["customizeReset", "portrait"], {
+            disabled: !c.portrait,
+          }),
+          btn("Retirer la bannière", "do", ["customizeReset", "banner"], {
+            disabled: !c.banner,
+          }),
+          btn("Effacer les textes", "do", ["customizeReset", "text"], {
+            disabled: !c.title && !c.bio,
+          }),
+        ),
+      );
+      push(
+        row(
+          btn("Voir mon profil public", "viewProfile", [owner]),
+          nav("Retour au carnet", "profile"),
+        ),
+      );
+      break;
+    }
     case "welcome":
       screen.title = "La Brume t’attend";
       screen.subtitle =
@@ -498,6 +552,8 @@ export function buildView(result, owner) {
     case "profile": {
       screen.title = p.name;
       screen.subtitle = `${RACES[p.raceId].name} · ${CLASSES[p.classId].name} · niveau ${p.level}${p.bosses.includes(11) ? " · Briseur de Brume" : ""}`;
+      if (p.customization?.title)
+        screen.subtitle += ` · ${p.customization.title}`;
       vitals();
       screen.cards = [
         card(
@@ -534,6 +590,14 @@ export function buildView(result, owner) {
           nav("Voir les profils", "directory"),
         ),
       );
+      push(
+        row(
+          nav("Personnalisation du profil", "customize"),
+          btn("Voir mon profil public", "viewProfile", [owner]),
+        ),
+      );
+      if (p.customization?.bio)
+        screen.cards.push(card("Ton histoire", p.customization.bio));
       break;
     }
     case "map":
@@ -570,7 +634,7 @@ export function buildView(result, owner) {
           card(
             "Face à toi",
             `Vie : ${e.hp} / ${e.maxHp}\n${e.attack} attaque · ${Math.round(e.defense)} défense${e.boss && e.hp < e.maxHp * 0.4 ? "\nLe gardien est enragé !" : ""}`,
-            { accent: "red" },
+            { accent: "red", portrait: enemyPortrait(e.name) },
           ),
           card(
             "Son prochain mouvement",
@@ -1748,6 +1812,10 @@ export function buildView(result, owner) {
         ),
       ];
   }
+  if (["raid", "raidPreview"].includes(result.type) && screen.cards.length) {
+    const boss = result.boss ?? RAIDS[result.raidId];
+    if (boss) screen.cards[0].portrait = enemyPortrait(boss.name);
+  }
   footer();
   return { screen, components };
 }
@@ -1759,11 +1827,13 @@ export async function render(result, owner) {
     `${screen.title}. ${screen.subtitle}. ${screen.notice ?? ""} ${screen.cards.map((c) => `${c.title} : ${c.text}`).join(" ")}`,
   ).slice(0, 1024);
   return {
-    content: "",
+    content: /^\d{17,20}$/.test(owner) ? `<@${owner}>` : "",
     embeds: [],
     attachments: [],
     files: [{ attachment: panel.buffer, name: "brumeterre.png", description }],
     components,
-    allowedMentions: { parse: [] },
+    allowedMentions: /^\d{17,20}$/.test(owner)
+      ? { parse: [], users: [owner], repliedUser: false }
+      : { parse: [] },
   };
 }

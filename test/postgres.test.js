@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PostgresStore } from "../src/store.js";
 import { Game } from "../src/game.js";
+import { normalizeImage } from "../src/profile-media.js";
+import { createCanvas } from "@napi-rs/canvas";
+import { resolveRoute } from "../src/controller.js";
 
 const url = process.env.TEST_DATABASE_URL;
 test(
@@ -67,6 +70,20 @@ test(
       await gb.execute("guildJoin", "one", { guildId: guild.id });
       await gb.execute("cityDonate", "one", { resource: "bois", quantity: 10 });
       const goldAfterSocial = (await ga.execute("profile", "seller")).p.gold;
+      const image = createCanvas(64, 64);
+      image.getContext("2d").fillRect(0, 0, 64, 64);
+      const portrait = await normalizeImage(
+        await image.encode("png"),
+        "portrait",
+      );
+      await ga.execute("customizeImage", "seller", {
+        slot: "portrait",
+        media: portrait,
+      });
+      await ga.execute("customizeText", "seller", {
+        title: "Gardien de Vesper",
+        bio: "Une histoire sauvegardée dans PostgreSQL.",
+      });
       await a.close();
       a = new PostgresStore(url, options);
       await a.init();
@@ -83,6 +100,14 @@ test(
           .bois,
         10,
       );
+      const publicHero = await resolveRoute(
+        new Game(a),
+        { action: "publicProfile", args: { targetId: "seller" } },
+        "one",
+      );
+      assert.equal(publicHero.target.title, "Gardien de Vesper");
+      assert.equal(publicHero.appearance.portrait.hash, portrait.hash);
+      assert.equal(publicHero.appearance.portrait.data, portrait.data);
     } finally {
       if (a) await a.close();
       if (b) await b.close();

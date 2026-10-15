@@ -6,6 +6,63 @@ const asset = (name) =>
 GlobalFonts.registerFromPath(asset("fonts/Cinzel-Regular.ttf"), "BrumeTitle");
 GlobalFonts.registerFromPath(asset("fonts/Lato-Regular.ttf"), "BrumeText");
 const backdrops = new Map();
+const portraits = new Map();
+async function portraitImage(ref) {
+  if (!ref) return null;
+  const key = ref.hash ?? `atlas-${ref.atlas}`;
+  if (!portraits.has(key)) {
+    const source =
+      ref.data && ref.mime === "image/webp"
+        ? Buffer.from(ref.data, "base64")
+        : Number.isInteger(ref.atlas) && ref.atlas >= 0 && ref.atlas <= 3
+          ? asset(`portraits/atlas-${ref.atlas}.webp`)
+          : null;
+    if (!source) return null;
+    portraits.set(key, loadImage(source));
+    while (portraits.size > 24) portraits.delete(portraits.keys().next().value);
+  }
+  let image;
+  try {
+    image = await portraits.get(key);
+  } catch {
+    portraits.delete(key);
+    return null;
+  }
+  const columns = ref.columns ?? 1;
+  const cellW = image.width / columns,
+    cellH = image.height / columns;
+  return {
+    image,
+    sx: ((ref.index ?? 0) % columns) * cellW,
+    sy: Math.floor((ref.index ?? 0) / columns) * cellH,
+    sw: cellW,
+    sh: cellH,
+  };
+}
+function drawPortrait(ctx, picture, x, y, size, accent) {
+  if (!picture) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(
+    picture.image,
+    picture.sx,
+    picture.sy,
+    picture.sw,
+    picture.sh,
+    x,
+    y,
+    size,
+    size,
+  );
+  ctx.restore();
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x + size / 2, y + size / 2, size / 2 + 3, 0, Math.PI * 2);
+  ctx.stroke();
+}
 const BACKGROUNDS = {
   profile: "brumeterre.png",
   social: "social.png",
@@ -172,12 +229,20 @@ export async function drawPanel(screen) {
   const file = BACKGROUNDS[screen.background] ?? BACKGROUNDS.profile;
   if (!backdrops.has(file)) backdrops.set(file, loadImage(asset(file)));
   const image = await backdrops.get(file);
+  const [heroPortrait, bannerPicture] = await Promise.all([
+    portraitImage(screen.portrait),
+    portraitImage(screen.banner),
+  ]);
+  const cardPictures = await Promise.all(
+    (screen.cards ?? []).map((c) => portraitImage(c.portrait)),
+  );
   const measure = createCanvas(WIDTH, 100).getContext("2d");
   const tone = PALETTE[screen.tone] ?? PALETTE.gold;
   const columns = screen.compact ? 1 : 2;
   const cardWidth = (WIDTH - PAD * 2 - GAP * (columns - 1)) / columns;
   font(measure, 22);
-  let cursor = 170;
+  const headerBottom = bannerPicture ? 300 : 170;
+  let cursor = headerBottom;
   const noticeLines = screen.notice
     ? wrapText(measure, screen.notice, WIDTH - PAD * 2 - 36)
     : [];
@@ -187,21 +252,27 @@ export async function drawPanel(screen) {
   if (screen.metrics?.length) cursor += 112;
   const cards = [];
   for (let i = 0; i < (screen.cards ?? []).length; i += columns) {
-    const pair = screen.cards.slice(i, i + columns).map((card) => {
+    const pair = screen.cards.slice(i, i + columns).map((card, offset) => {
+      const picture = cardPictures[i + offset];
+      const textWidth = cardWidth - 42 - (picture ? 140 : 0);
       font(measure, 21, true);
-      const titles = wrapText(measure, card.title, cardWidth - 42);
+      const titles = wrapText(measure, card.title, textWidth);
       font(measure, 23);
-      const lines = wrapText(measure, card.text, cardWidth - 42);
+      const lines = wrapText(measure, card.text, textWidth);
       return {
         ...card,
         titles,
         lines,
-        height:
+        picture,
+        textWidth,
+        height: Math.max(
+          picture ? 168 : 0,
           42 +
-          titles.length * 29 +
-          12 +
-          lines.length * 31 +
-          (card.tag ? 33 : 0),
+            titles.length * 29 +
+            12 +
+            lines.length * 31 +
+            (card.tag ? 33 : 0),
+        ),
       };
     });
     const height = Math.max(...pair.map((card) => card.height));
@@ -227,6 +298,20 @@ export async function drawPanel(screen) {
     image.width * imageScale,
     image.height * imageScale,
   );
+  if (bannerPicture) {
+    const cropHeight = (250 * bannerPicture.image.width) / (WIDTH - 48);
+    ctx.drawImage(
+      bannerPicture.image,
+      0,
+      (bannerPicture.image.height - cropHeight) / 2,
+      bannerPicture.image.width,
+      cropHeight,
+      24,
+      24,
+      WIDTH - 48,
+      250,
+    );
+  }
   const veil = ctx.createLinearGradient(0, 0, WIDTH, height);
   veil.addColorStop(0, "rgba(7,14,16,.91)");
   veil.addColorStop(0.55, "rgba(8,14,16,.76)");
@@ -279,10 +364,12 @@ export async function drawPanel(screen) {
       maxLines: 1,
     },
   );
-  seal(ctx, WIDTH - PAD - 58, 99, tone);
+  if (heroPortrait)
+    drawPortrait(ctx, heroPortrait, WIDTH - PAD - 112, 43, 112, tone);
+  else seal(ctx, WIDTH - PAD - 58, 99, tone);
   if (noticeHeight) {
-    box(ctx, PAD, 170, WIDTH - PAD * 2, noticeHeight, tone);
-    text(ctx, screen.notice, PAD + 18, 184, {
+    box(ctx, PAD, headerBottom, WIDTH - PAD * 2, noticeHeight, tone);
+    text(ctx, screen.notice, PAD + 18, headerBottom + 14, {
       size: 22,
       width: WIDTH - PAD * 2 - 36,
     });
@@ -321,24 +408,27 @@ export async function drawPanel(screen) {
   for (const card of cards) {
     const accent = colorOf(card.accent, PALETTE.line);
     box(ctx, card.x, card.y, card.width, card.height, accent);
+    if (card.picture)
+      drawPortrait(ctx, card.picture, card.x + 20, card.y + 24, 112, accent);
+    const textX = card.x + 21 + (card.picture ? 140 : 0);
     let y = card.y + 21;
-    y += text(ctx, card.title, card.x + 21, y, {
+    y += text(ctx, card.title, textX, y, {
       size: 21,
       color: colorOf(card.titleColor, PALETTE.gold),
       title: true,
-      width: card.width - 42,
+      width: card.textWidth,
     });
     y += 12;
-    y += text(ctx, card.text, card.x + 21, y, {
+    y += text(ctx, card.text, textX, y, {
       size: 23,
       color: colorOf(card.textColor, PALETTE.paper),
-      width: card.width - 42,
+      width: card.textWidth,
     });
     if (card.tag)
-      text(ctx, card.tag, card.x + 21, y + 7, {
+      text(ctx, card.tag, textX, y + 7, {
         size: 17,
         color: PALETTE.muted,
-        width: card.width - 42,
+        width: card.textWidth,
         maxLines: 1,
       });
   }

@@ -10,6 +10,7 @@ import { render } from "./views.js";
 import { normalizeCity, cityStats } from "./social-game.js";
 import { CITY_UPGRADES } from "./social-content.js";
 import { publicProfile, publicMarket, activityFor } from "./public.js";
+import { decorateAppearance, importAttachment } from "./profile-media.js";
 
 const socialRoutes = {
   social: "socialInfo",
@@ -23,6 +24,7 @@ const socialRoutes = {
   city: "cityInfo",
   cityDefensePlan: "cityInfo",
   cityTargets: "cityTargets",
+  customize: "customizeInfo",
 };
 
 const uiOnly = new Set([
@@ -56,6 +58,13 @@ const uiOnly = new Set([
   "blocked",
 ]);
 export async function resolveRoute(game, route, userId, requestId) {
+  return decorateAppearance(
+    game,
+    await resolveRouteData(game, route, userId, requestId),
+    userId,
+  );
+}
+async function resolveRouteData(game, route, userId, requestId) {
   const action = route.action,
     args = route.args ?? {};
   const now = game.now();
@@ -79,6 +88,19 @@ export async function resolveRoute(game, route, userId, requestId) {
     return { type: action, ...args, now };
   }
   if (!saved && action !== "create") return { type: "welcome", now };
+  if (action === "profileUpload") {
+    ensure(
+      ["portrait", "banner"].includes(args.slot),
+      "Emplacement d’image inconnu.",
+    );
+    const media = await importAttachment(args.attachment, args.slot);
+    return game.execute(
+      "customizeImage",
+      userId,
+      { slot: args.slot, media },
+      { requestId },
+    );
+  }
   if (args.page !== undefined)
     ensure(
       Number.isSafeInteger(args.page) && args.page >= 1 && args.page <= 10000,
@@ -333,6 +355,15 @@ export function createInteractionHandler(
     if (!interaction.inGuild()) return;
     const isCommand = interaction.isChatInputCommand();
     const isModal = Boolean(interaction.isModalSubmit?.());
+    const paint = async (result) =>
+      renderer(
+        result.appearance
+          ? result
+          : await decorateAppearance(game, result, interaction.user.id).catch(
+              () => result,
+            ),
+        interaction.user.id,
+      );
     if (
       !isCommand &&
       !isModal &&
@@ -358,20 +389,28 @@ export function createInteractionHandler(
       if (!route) {
         await interaction.deferReply({ flags: 64 });
         await interaction.editReply(
-          await renderer(
-            {
-              type: "error",
-              message:
-                "Ce panneau est ancien ou appartient à un autre aventurier. Ouvre ton carnet avec /profil.",
-            },
-            interaction.user.id,
-          ),
+          await paint({
+            type: "error",
+            message:
+              "Ce panneau est ancien ou appartient à un autre aventurier. Ouvre ton carnet avec /profil.",
+          }),
         );
         return;
       }
       if (route.action === "form") {
         const modal = buildModal(interaction.user.id, route.kind, route.params);
         ensure(modal, "Ce formulaire n’est plus disponible.");
+        if (route.kind === "profileText") {
+          const { p } = await game.execute(
+            "customizeInfo",
+            interaction.user.id,
+          );
+          for (const row of modal.components)
+            for (const input of row.components) {
+              const value = p.customization[input.custom_id];
+              if (value) input.value = value;
+            }
+        }
         await interaction.showModal(modal);
         return;
       }
@@ -381,14 +420,11 @@ export function createInteractionHandler(
         else {
           await interaction.deferReply({ flags: 64 });
           await interaction.editReply(
-            await renderer(
-              {
-                type: "error",
-                message:
-                  "Un instant, ton action précédente se termine. Réessaie dans une seconde.",
-              },
-              interaction.user.id,
-            ),
+            await paint({
+              type: "error",
+              message:
+                "Un instant, ton action précédente se termine. Réessaie dans une seconde.",
+            }),
           );
         }
         return;
@@ -426,14 +462,14 @@ export function createInteractionHandler(
       );
       if (!result.duplicate) {
         if (isCommand && route.public) result.public = true;
-        const payload = await renderer(result, interaction.user.id);
+        const payload = await paint(result);
         // Un PNG lent ne doit pas remplacer une destination choisie plus tard.
         if (!panelKey || renders.get(panelKey)?.revision === revision)
           await interaction.editReply(payload);
         if (result.activity) {
           try {
             await interaction.followUp({
-              ...(await renderer(result.activity, interaction.user.id)),
+              ...(await paint(result.activity)),
               flags: 0,
             });
           } catch (error) {
@@ -456,10 +492,7 @@ export function createInteractionHandler(
         ? error.message
         : "La Brume a perturbé cette action. Réessaie dans un instant ou préviens l’administrateur.";
       try {
-        const payload = await renderer(
-          { type: "error", message },
-          interaction.user.id,
-        );
+        const payload = await paint({ type: "error", message });
         if (interaction.deferred || interaction.replied) {
           if (isCommand || !interaction.message)
             await interaction.editReply(payload);

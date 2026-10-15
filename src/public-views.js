@@ -35,6 +35,7 @@ export function buildPublicView(result, ui) {
       const t = result.target;
       screen.title = t.name;
       screen.subtitle = `${RACES[t.raceId].name} · ${CLASSES[t.classId].name} · niveau ${t.level}`;
+      if (t.title) screen.subtitle += ` · ${t.title}`;
       screen.metrics = [
         { label: "Attaque", value: String(t.stats.attack) },
         { label: "Défense", value: String(t.stats.defense) },
@@ -70,6 +71,7 @@ export function buildPublicView(result, ui) {
           button("Actualiser ce profil", "publicProfile", t.id),
         ),
       );
+      if (t.bio) screen.cards.push(card("Son histoire", t.bio));
       footer();
       return true;
     }

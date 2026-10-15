@@ -30,10 +30,15 @@ jobs:
         run: >-
           docker run --rm terre-des-noobs:ci node --input-type=module -e
           "import {render} from './src/views.js';
-          import {createSocialPreviewGame} from './scripts/preview.js';
+          import {createCustomizedPreviewGame} from './scripts/preview.js';
           import {resolveRoute} from './src/controller.js';
-          const game = await createSocialPreviewGame();
-          for (const action of ['profile','social','market','info','publicProfile','publicMarket']) {
+          const game = await createCustomizedPreviewGame();
+          for (const action of ['profile','customize','social','market','info','publicProfile','publicMarket']) {
           const panel = await render(await resolveRoute(game,{action},'demo'),'demo');
           if (!panel.files[0].attachment.length) process.exit(1);
-          console.log(action, 'Canvas PNG:', panel.files[0].attachment.length, 'bytes'); }"
+          console.log(action, 'Canvas PNG:', panel.files[0].attachment.length, 'bytes'); }
+          await game.execute('travel','demo',{zoneId:2});
+          await game.execute('explore','demo');
+          const battle = await render(await resolveRoute(game,{action:'campaign'},'demo'),'demo');
+          if (!battle.files[0].attachment.length) process.exit(1);
+          console.log('Enemy portrait PNG:', battle.files[0].attachment.length, 'bytes');"

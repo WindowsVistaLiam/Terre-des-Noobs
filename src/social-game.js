@@ -219,6 +219,8 @@ export const socialMethods = {
       type: "playerCard",
       target: {
         ...summary(target),
+        title: target.customization?.title ?? "",
+        bio: target.customization?.bio ?? "",
         stats: statsOf(target),
         guildName: guild?.name,
       },

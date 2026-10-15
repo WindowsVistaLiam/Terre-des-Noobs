@@ -14,7 +14,7 @@ Les cités sont attachées à leur guilde. Les dons débitent le coffre personne
 
 Les parcours ne reposent sur aucun collecteur temporaire ou session en mémoire. Les identifiants des composants contiennent leur propriétaire, leur action et leur contexte minimal. Les menus restent donc utilisables après redémarrage, à données persistantes identiques. Le parcours de création porte ses choix de race et classe jusqu’au formulaire du nom. Les boutons de confirmation précèdent la démolition, le recyclage, le départ d’une guilde ou d’un groupe et le lancement d’un raid.
 
-Les panneaux sont privés. Une erreur dans un bouton répond par une image privée sans remplacer le panneau initial. Un formulaire issu d’un message met à jour ce même message. Chaque remplacement efface les anciennes pièces jointes et charge un seul PNG. Les images restent sous la limite des pièces jointes et incluent une description alternative. Le marchand est un puits d’or à prix fixes ; seuls les joueurs vendent des équipements.
+Les carnets personnels sont privés ; les commandes Profil, Marché et Info montrent une projection publique. Une erreur dans un bouton répond par une image privée sans remplacer le panneau initial. Un formulaire issu d’un carnet privé met à jour ce même message. Chaque remplacement efface les anciennes pièces jointes et charge un seul PNG. Les images restent sous la limite des pièces jointes et incluent une description alternative. Le marchand est un puits d’or à prix fixes ; seuls les joueurs vendent des équipements.
 
 ## Persistance
 
@@ -60,4 +60,14 @@ Le flux Discord est testé par des interactions simulées ; ces tests ne remplac
 
 Les commandes Profil, Marché et Info répondent publiquement ; Social reste éphémère. `public.js` construit des projections explicites sans sac, coffre ni relations privées. `public-views.js` utilise des contrôles `tdnp` limités à la lecture. Chaque clic partagé ouvre une nouvelle réponse éphémère liée au visiteur ; il ne met jamais à jour le message public. Les contrôles personnels `tdn` gardent leur vérification du propriétaire.
 
-Après une mutation réussie, le contrôleur peut publier une chronique Canvas compacte, reconstruite à partir d’une liste précise d’événements. Elle ne réutilise pas le texte privé du résultat. La déduplication des interactions supprime aussi les annonces répétées. Un échec d’envoi d’annonce ne relance pas une mutation déjà validée. Les notifications restent dans le salon d’origine, sans mention ni message privé automatique.
+Après une mutation réussie, le contrôleur peut publier une chronique Canvas compacte, reconstruite à partir d’une liste précise d’événements. Elle ne réutilise pas le texte privé du résultat. La déduplication des interactions supprime aussi les annonces répétées. Un échec d’envoi d’annonce ne relance pas une mutation déjà validée. Les notifications restent dans le salon d’origine, avec une mention limitée à l’auteur de l’action et sans message privé automatique.
+
+## Personnalisation et fichiers importés
+
+`player.customization` conserve seulement le titre, l’histoire et les références de ses images. Chaque image normalisée est un document `profile_media` distinct, nommé `playerId.portrait` ou `playerId.banner`, avec les octets WebP en base64, un hash et les dimensions. Les listes de personnages ne chargent pas ces octets. Les anciens personnages reçoivent les champs par défaut de façon additive, sans migration destructive.
+
+Les formulaires natifs Discord utilisent Label et File Upload. Seules leurs pièces jointes HTTPS sur les deux hôtes CDN Discord autorisés peuvent être téléchargées, y compris les pièces jointes éphémères. Pas d’URL arbitraire ni de redirection. Taille déclarée et lecture du flux sont bornées à 5 Mo, avec un délai de 12 secondes. Les en-têtes PNG/JPEG/WebP permettent de vérifier les dimensions avant le décodage ; les octets sont ensuite recadrés, réduits et réencodés. Les métadonnées originales et le lien signé Discord ne sont pas stockés.
+
+L’accusé de réception Discord précède le téléchargement, qui a lieu hors transaction SQL. Un import échoué ne remplace pas l’image précédente. Le remplacement des octets et de leur référence est atomique ; retirer une image supprime son document. PostgreSQL suffit sur Railway, sans volume de fichiers supplémentaire. Le moteur Canvas utilise un cache borné à 24 images décodées et dessine le portrait du joueur ou du profil consulté, puis celui de l’ennemi dans sa carte. Une erreur de décodage se replie sur le blason pour préserver la réponse.
+
+Le contenu textuel des réponses contient seulement la mention de l’auteur ; `allowedMentions` autorise cet utilisateur et désactive l’analyse des autres mentions. Titres et descriptions sont dessinés en pixels, jamais interprétés comme des mentions Discord.

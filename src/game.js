@@ -129,6 +129,10 @@ export class Game {
       "partyInfo",
       "raid",
       "shopBuy",
+      "customizeInfo",
+      "customizeText",
+      "customizeImage",
+      "customizeReset",
       ...Object.keys(socialMethods),
     ]);
     ensure(handlers.has(action), "Action inconnue.");
@@ -160,6 +164,7 @@ export class Game {
       "Cette sauvegarde nécessite une migration. Contacte l’administrateur.",
     );
     normalizeSocial(p);
+    p.customization ??= { title: "", bio: "", portrait: null, banner: null };
     const s = statsOf(p);
     const energyTicks = Math.max(
       0,
@@ -197,6 +202,7 @@ export class Game {
   }
   async save(tx, p) {
     normalizeSocial(p);
+    p.customization ??= { title: "", bio: "", portrait: null, banner: null };
     await tx.set("player", p.id, p);
   }
   spend(p, gold, resources = {}) {
@@ -343,6 +349,81 @@ export class Game {
   }
   async profile(tx, id, _, now) {
     return { p: await this.player(tx, id, now), type: "profile" };
+  }
+  async customizeInfo(tx, id, _, now) {
+    return { p: await this.player(tx, id, now), type: "customize" };
+  }
+  async customizeText(tx, id, { title = "", bio = "" }, now) {
+    const p = await this.player(tx, id, now);
+    ensure(
+      typeof title === "string" &&
+        title.trim().length <= 40 &&
+        typeof bio === "string" &&
+        bio.trim().length <= 600,
+      "Le titre accepte 40 caractères et la description 600 caractères maximum.",
+    );
+    const clean = (value) =>
+      value.trim().replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "");
+    p.customization.title = clean(title).replaceAll("\n", " ");
+    p.customization.bio = clean(bio);
+    await this.save(tx, p);
+    return {
+      p,
+      type: "customize",
+      message: "Ton titre et ta description sont à jour sur ton profil public.",
+    };
+  }
+  async customizeImage(tx, id, { slot, media }, now) {
+    const p = await this.player(tx, id, now);
+    ensure(
+      ["portrait", "banner"].includes(slot),
+      "Emplacement d’image inconnu.",
+    );
+    ensure(
+      media?.mime === "image/webp" &&
+        typeof media.data === "string" &&
+        media.data.length <= 1_000_000 &&
+        /^[A-Za-z0-9+/]+={0,2}$/.test(media.data) &&
+        /^[a-f0-9]{64}$/.test(media.hash) &&
+        media.width === (slot === "portrait" ? 256 : 1280) &&
+        media.height === (slot === "portrait" ? 256 : 320),
+      "Image invalide : importe ton fichier depuis le bouton de personnalisation.",
+    );
+    await tx.set("profile_media", `${id}.${slot}`, {
+      ...media,
+      id: `${id}.${slot}`,
+      updatedAt: now,
+    });
+    p.customization[slot] = { hash: media.hash, updatedAt: now };
+    await this.save(tx, p);
+    return {
+      p,
+      type: "customize",
+      message:
+        slot === "portrait"
+          ? "Ton portrait est enregistré et apparaîtra sur les réponses du bot."
+          : "Ta bannière est enregistrée sur ton profil.",
+    };
+  }
+  async customizeReset(tx, id, { slot }, now) {
+    const p = await this.player(tx, id, now);
+    ensure(
+      ["portrait", "banner", "text"].includes(slot),
+      "Personnalisation inconnue.",
+    );
+    if (slot === "text") {
+      p.customization.title = "";
+      p.customization.bio = "";
+    } else {
+      await tx.delete("profile_media", `${id}.${slot}`);
+      p.customization[slot] = null;
+    }
+    await this.save(tx, p);
+    return {
+      p,
+      type: "customize",
+      message: "Cette personnalisation a été retirée.",
+    };
   }
   async inventory(tx, id, _, now) {
     return { p: await this.player(tx, id, now), type: "inventory" };

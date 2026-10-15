@@ -1,10 +1,12 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Game, statsOf } from "../src/game.js";
 import { MemoryStore } from "../src/store.js";
 import { resolveRoute } from "../src/controller.js";
 import { render } from "../src/views.js";
+import { normalizeImage } from "../src/profile-media.js";
 
 export async function createPreviewGame() {
   const store = new MemoryStore();
@@ -112,6 +114,45 @@ export async function createSocialPreviewGame() {
   return game;
 }
 
+export async function createCustomizedPreviewGame() {
+  const game = await createSocialPreviewGame();
+  const atlas = await loadImage(
+    fileURLToPath(
+      new URL("../src/assets/portraits/atlas-3.webp", import.meta.url),
+    ),
+  );
+  const face = createCanvas(256, 256);
+  face
+    .getContext("2d")
+    .drawImage(
+      atlas,
+      atlas.width / 2,
+      0,
+      atlas.width / 2,
+      atlas.height / 2,
+      0,
+      0,
+      256,
+      256,
+    );
+  await game.execute("customizeImage", "demo", {
+    slot: "portrait",
+    media: await normalizeImage(await face.encode("png"), "portrait"),
+  });
+  await game.execute("customizeImage", "demo", {
+    slot: "banner",
+    media: await normalizeImage(
+      await readFile(new URL("../src/assets/brumeterre.png", import.meta.url)),
+      "banner",
+    ),
+  });
+  await game.execute("customizeText", "demo", {
+    title: "Veilleuse des astres",
+    bio: "Gardienne des routes de Vesper, je veille sur les voyageurs perdus dans la Brume.\nMon serment : nul compagnon ne reste derrière.",
+  });
+  return game;
+}
+
 async function main() {
   const game = await createSocialPreviewGame();
   const destination = resolve(".local/previews");
@@ -168,8 +209,34 @@ async function main() {
       )
     ).files[0].attachment,
   );
+  const customized = await createCustomizedPreviewGame();
+  for (const [name, action] of [
+    ["personnalisation", "customize"],
+    ["profil-personnalise", "publicProfile"],
+    ["profil-prive-personnalise", "profile"],
+  ]) {
+    const panel = await render(
+      await resolveRoute(customized, { action }, "demo"),
+      "demo",
+    );
+    await writeFile(
+      resolve(destination, `${name}.png`),
+      panel.files[0].attachment,
+    );
+  }
+  await customized.execute("travel", "demo", { zoneId: 2 });
+  await customized.execute("explore", "demo");
+  await writeFile(
+    resolve(destination, "combat-portraits.png"),
+    (
+      await render(
+        await resolveRoute(customized, { action: "campaign" }, "demo"),
+        "demo",
+      )
+    ).files[0].attachment,
+  );
   console.log(
-    `${Object.keys(routes).length + 2} panneaux de démonstration générés dans ${destination}`,
+    `${Object.keys(routes).length + 6} panneaux de démonstration générés dans ${destination}`,
   );
 }
 if (

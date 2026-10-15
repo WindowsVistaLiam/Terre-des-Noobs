@@ -51,6 +51,7 @@ export const NAVIGABLE = new Set([
   "cityDefensePlan",
   "cityTargets",
   "guildRoster",
+  "customize",
 ]);
 export const CATEGORIES = new Set([
   "races",
@@ -76,6 +77,9 @@ export const FORM_KINDS = new Set([
   "shopBuy",
   "cityDonate",
   "guildBulletin",
+  "profileText",
+  "portraitUpload",
+  "bannerUpload",
 ]);
 
 export const uiId = (owner, action, ...args) =>
@@ -170,6 +174,7 @@ const doActions = {
   cityClaim: () => ({}),
   cityWarToggle: () => ({}),
   citySiege: (a) => ({ guildId: a }),
+  customizeReset: (a) => ({ slot: a }),
 };
 export function routeComponent(customId, owner, values = []) {
   if (customId?.startsWith("tdnp:"))
@@ -322,7 +327,62 @@ const input = (
 });
 export function buildModal(owner, kind, params = []) {
   if (!FORM_KINDS.has(kind)) return null;
+  if (["portraitUpload", "bannerUpload"].includes(kind))
+    return {
+      custom_id: uiId(owner, "submit", kind),
+      title:
+        kind === "portraitUpload"
+          ? "Le portrait de ton personnage"
+          : "La bannière de ton personnage",
+      components: [
+        {
+          type: 18,
+          label: "Choisis une image PNG, JPG ou WebP",
+          description:
+            "Image fixe, 5 Mo maximum. Recadrage centré automatique.",
+          component: {
+            type: 19,
+            custom_id: "image",
+            min_values: 1,
+            max_values: 1,
+            required: true,
+            file_types: [".png", ".jpg", ".jpeg", ".webp"],
+          },
+        },
+      ],
+    };
   const forms = {
+    profileText: [
+      "Présente ton personnage",
+      [
+        {
+          type: 1,
+          components: [
+            {
+              type: 4,
+              custom_id: "title",
+              label: "Titre ou devise (facultatif)",
+              style: 1,
+              required: false,
+              max_length: 40,
+            },
+          ],
+        },
+        {
+          type: 1,
+          components: [
+            {
+              type: 4,
+              custom_id: "bio",
+              label: "Description et histoire (facultatif)",
+              style: 2,
+              required: false,
+              max_length: 600,
+            },
+          ],
+        },
+      ],
+    ],
     create: [
       "Nomme ton aventurier",
       [
@@ -422,6 +482,22 @@ export function routeModal(customId, owner, fields) {
   const text = (key) => fields.getTextInputValue(key).trim();
   const number = (key) => (/^\d+$/.test(text(key)) ? Number(text(key)) : NaN);
   switch (kind) {
+    case "profileText":
+      return {
+        action: "customizeText",
+        args: { title: text("title"), bio: text("bio") },
+      };
+    case "portraitUpload":
+    case "bannerUpload": {
+      const files = fields.getUploadedFiles("image", true);
+      return {
+        action: "profileUpload",
+        args: {
+          slot: kind === "portraitUpload" ? "portrait" : "banner",
+          attachment: files?.values().next().value,
+        },
+      };
+    }
     case "create":
       return {
         action: "create",

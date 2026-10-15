@@ -27,6 +27,14 @@ La création de héros, les départs, les résultats de combat, les construction
 
 Le Profil conserve son panorama d’origine. Social utilise une salle de guilde, le Marché une rue marchande, et Info une bibliothèque. Les peuples du codex partagent cette bibliothèque avec une couleur de texte propre à chacun.
 
+**Personnaliser son héros :** `/profil` → **Mon carnet privé** → **Personnalisation du profil**. Les joueurs importent directement un portrait et une bannière via les formulaires de fichiers Discord, puis écrivent un titre/devise (40 caractères) et une histoire (600 caractères). Formats fixes PNG, JPG et WebP, jusqu’à 5 Mo, de 32 à 4096 pixels par côté et 16 millions de pixels maximum. Le portrait est recadré en carré ; la bannière au format 4:1. Les textes existants sont préremplis et les boutons permettent de retirer chaque élément.
+
+Le portrait apparaît dans le coin supérieur droit des menus, des erreurs et des annonces. Sur le profil d’un autre personnage, son portrait est utilisé. La bannière habille les pages de profil et de personnalisation. Les réponses mentionnent seulement le joueur à l’origine de l’action ; les mentions saisies dans une description ne déclenchent aucune notification. Les messages ordinaires du salon ne déclenchent pas de réponse automatique.
+
+Le bestiaire possède 51 portraits originaux embarqués : 36 ennemis, 12 gardiens et 3 boss de raid. Les élites reprennent le portrait de leur ennemi. Le portrait adverse apparaît dans la fiche de combat, tandis que celui du joueur reste dans l’en-tête. Un portrait d’aventurier est fourni par défaut.
+
+Les images importées sont téléchargées une seule fois depuis les pièces jointes Discord, vérifiées, redimensionnées puis sauvegardées dans PostgreSQL. Elles restent disponibles même si le lien Discord expire ou si Railway redéploie le bot ; aucun volume supplémentaire ni nouvelle variable d’environnement n’est nécessaire. Un [message de mise à jour pour la communauté](docs/annonces/personnalisation-profils.txt) est prêt à copier.
+
 ![Exemple du panneau de personnage](docs/images/profil.png)
 
 ## Ce qui est jouable
@@ -153,7 +161,7 @@ Si `REGISTER_COMMANDS=false`, exécuter `npm run register` pour forcer la mise �
 npm run dev       # Recharge le bot après changement de code
 npm run check     # Vérifie la syntaxe JavaScript
 npm test          # Jeu, menus, formulaires, images Canvas et disponibilité HTTP
-npm run preview   # Génère 20 vrais panneaux dans .local/previews, sans token
+npm run preview   # Génère 24 vrais panneaux dans .local/previews, sans token
 npm run register  # Réenregistre les quatre commandes Discord
 ```
 

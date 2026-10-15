@@ -174,6 +174,7 @@ export function buildSocialView(result, owner, ui) {
         unavailable = result.blocked || result.unavailable || t.id === owner;
       screen.title = t.name;
       screen.subtitle = `${RACES[t.raceId].name} · ${CLASSES[t.classId].name} · niveau ${t.level}`;
+      if (t.title) screen.subtitle += ` · ${t.title}`;
       screen.cards = [
         card(
           "Sa voie",
@@ -213,6 +214,7 @@ export function buildSocialView(result, owner, ui) {
           }),
         ),
       );
+      if (t.bio) screen.cards.push(card("Son histoire", t.bio));
       push(
         row(
           btn("Inviter dans ma guilde", "do", ["guildInvite", t.id], {

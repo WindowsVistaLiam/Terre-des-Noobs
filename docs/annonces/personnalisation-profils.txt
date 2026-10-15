@@ -1,0 +1,21 @@
+📜 **MISE À JOUR — Vos héros prennent vie !**
+
+🖼️ **Un profil à votre image**
+Ajoutez votre portrait, une bannière, un titre ou une devise et l’histoire de votre personnage !
+
+👉 **/profil → Mon carnet privé → Personnalisation du profil**
+
+Importez vos images directement dans le formulaire Discord : PNG, JPG ou WebP fixe, jusqu’à 5 Mo. Un portrait carré et une bannière large donnent le meilleur résultat. Vous pouvez les remplacer ou les retirer quand vous voulez.
+
+👤 **Un repère sur vos menus**
+Votre portrait apparaît en haut à droite des réponses du bot, à la place du blason. Le bot mentionne aussi l’auteur de chaque action pour retrouver facilement son message dans le salon.
+
+⚔️ **Un vrai visage pour le bestiaire**
+Les 48 ennemis et gardiens de campagne, ainsi que les 3 boss de raid, ont désormais leur portrait médiéval fantastique. En combat, votre portrait reste en haut et celui de l’adversaire apparaît dans sa fiche.
+
+📖 **Montrez votre personnage**
+Votre bannière, votre titre et votre histoire sont visibles avec **/profil joueur:@ami**. Les coffres et les ressources restent privés.
+
+💾 Vos personnalisations sont sauvegardées et conservées après les redémarrages.
+
+On veut voir vos plus beaux aventuriers… et les histoires les moins crédibles de la Brume. 👀
