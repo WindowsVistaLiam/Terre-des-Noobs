@@ -24,3 +24,12 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
+      - name: Build production image
+        run: docker build -t terre-des-noobs:ci .
+      - name: Verify Canvas in production image
+        run: >-
+          docker run --rm terre-des-noobs:ci node --input-type=module -e
+          "import {render} from './src/views.js';
+          const panel = await render({type:'welcome'},'ci');
+          if (!panel.files[0].attachment.length) process.exit(1);
+          console.log('Production Canvas PNG:', panel.files[0].attachment.length, 'bytes');"

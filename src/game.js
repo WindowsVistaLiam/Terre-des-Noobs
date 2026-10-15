@@ -16,6 +16,7 @@ import {
   worldEvent,
   dayKey,
   buildingCost,
+  SHOP,
 } from "./content.js";
 
 export class GameError extends Error {}
@@ -124,6 +125,7 @@ export class Game {
       "partyLeave",
       "partyInfo",
       "raid",
+      "shopBuy",
     ]);
     ensure(handlers.has(action), "Action inconnue.");
     return this.store.transaction(async (tx) => {
@@ -141,7 +143,10 @@ export class Game {
   }
   async player(tx, id, now) {
     const p = await tx.get("player", id);
-    ensure(p, "Crée ton personnage avec /creer pour rejoindre Brumeterre.");
+    ensure(
+      p,
+      "Ouvre /profil et crée ton personnage pour rejoindre Brumeterre.",
+    );
     ensure(
       p.schemaVersion === 1,
       "Cette sauvegarde nécessite une migration. Contacte l’administrateur.",
@@ -179,7 +184,7 @@ export class Game {
     );
   }
   noBattle(p) {
-    ensure(!p.battle, "Termine le combat : /campagne ou /combat.");
+    ensure(!p.battle, "Termine le combat depuis Profil → Aventure.");
   }
   async save(tx, p) {
     await tx.set("player", p.id, p);
@@ -258,7 +263,7 @@ export class Game {
     );
     ensure(
       RACES[raceId] && CLASSES[classId],
-      "Race ou classe inconnue. Consulte /codex.",
+      "Race ou classe inconnue. Consulte les informations du jeu.",
     );
     ensure(
       typeof name === "string" && /^[\p{L}\p{N} '\-]{2,24}$/u.test(name),
@@ -359,7 +364,7 @@ export class Game {
     this.noBattle(p);
     ensure(
       p.location === "campaign",
-      "Choisis une destination avec /voyager ou /carte.",
+      "Choisis une destination dans le menu Aventure → Carte.",
     );
     ensure(p.hp > 0, "Tu dois te soigner avant de repartir.");
     ensure(
@@ -430,11 +435,11 @@ export class Game {
   async combat(tx, id, { move, battleId, turn }, now) {
     const p = await this.player(tx, id, now);
     const b = p.battle;
-    ensure(b, "Aucun combat en cours. Utilise /campagne.");
+    ensure(b, "Aucun combat en cours. Ouvre le menu Aventure.");
     if (battleId !== undefined)
       ensure(
         b.id === battleId && b.turn === turn,
-        "Ce tour a déjà été joué. Actualise avec /campagne.",
+        "Ce tour a déjà été joué. Rouvre le menu Aventure pour actualiser.",
       );
     ensure(
       ["attack", "skill", "guard", "potion", "ether", "flee"].includes(move),
@@ -784,7 +789,7 @@ export class Game {
     const p = await this.player(tx, id, now);
     this.home(p);
     const b = BUILDINGS[buildingId];
-    ensure(b, "Bâtiment inconnu. Consulte /codex batiments.");
+    ensure(b, "Bâtiment inconnu. Consulte Info → Bâtiments.");
     ensure(integer(slot, 1, 3), "Choisis un emplacement de 1 à 3.");
     ensure(
       !p.buildings[slot - 1],
@@ -881,7 +886,7 @@ export class Game {
     const p = await this.player(tx, id, now);
     this.home(p);
     const r = RECIPES[recipeId];
-    ensure(r, "Recette inconnue. Consulte /atelier.");
+    ensure(r, "Recette inconnue. Consulte Marché → Atelier.");
     ensure(integer(quantity, 1, 20), "Fabrique entre 1 et 20 lots.");
     ensure(
       !r.slot || p.gear.length + quantity <= 100,
@@ -1267,7 +1272,7 @@ export class Game {
       p,
       party,
       type: "party",
-      message: `Groupe créé ! Tes amis peuvent rejoindre avec /groupe rejoindre code:${party.id}. En rejoignant, ils acceptent le lancement du raid par le chef (20 énergie).`,
+      message: `Groupe créé ! Code : ${party.id}. Tes amis peuvent te retrouver dans Compagnons → Groupes ouverts. Rejoindre autorise le chef à lancer le raid (20 énergie par personne).`,
     };
   }
   async partyJoin(tx, id, { partyId }, now) {
@@ -1432,6 +1437,22 @@ export class Game {
       message: won
         ? `🏆 ${boss.name} tombe ! Chaque participant reçoit ${boss.reward} or, ${boss.reward * 2} XP, des matériaux, des insignes et un équipement rare ou épique.`
         : `💀 ${boss.name} vous repousse. Vous rentrez vivants, sans récompense. Préparez équipement et soutiens pour la prochaine tentative.`,
+    };
+  }
+
+  async shopBuy(tx, id, { resource, quantity = 1 }, now) {
+    const p = await this.player(tx, id, now);
+    this.home(p);
+    const product = SHOP[resource];
+    ensure(product, "Cette provision n’est pas proposée par le marchand.");
+    ensure(integer(quantity, 1, 100), "Choisis une quantité entre 1 et 100.");
+    this.spend(p, product.price * quantity);
+    add(p.resources, { [resource]: quantity });
+    await this.save(tx, p);
+    return {
+      p,
+      type: "store",
+      message: `${quantity} ${RESOURCES[resource]} acheté pour ${product.price * quantity} or. Les provisions sont dans ton coffre.`,
     };
   }
 }

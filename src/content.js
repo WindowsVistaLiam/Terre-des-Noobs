@@ -502,6 +502,24 @@ export const RESOURCES = {
   ether: "💧 Éther",
   insigne: "🏅 Insigne de raid",
 };
+
+// Le marchand du refuge fournit les provisions courantes ; les objets rares
+// et les équipements restent issus de l’exploration, de l’artisanat et des joueurs.
+export const SHOP = {
+  potion: {
+    price: 18,
+    description: "Restaure 40 % des PV maximaux, avec tes bonus de soin.",
+  },
+  ether: { price: 25, description: "Restaure 50 % de ton mana maximal." },
+  bois: { price: 4, description: "Matériau de construction et d’artisanat." },
+  pierre: {
+    price: 5,
+    description: "Fondations et amélioration des bâtiments.",
+  },
+  fer: { price: 9, description: "Forge, équipements et enchantements." },
+  herbe: { price: 6, description: "Ingrédient des potions et des éthers." },
+  cuir: { price: 7, description: "Armures et armes fabriquées à l’atelier." },
+};
 const building = (name, description, bonuses, production = {}, races = []) => ({
   name,
   description,

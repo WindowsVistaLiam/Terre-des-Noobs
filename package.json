@@ -13,9 +13,11 @@
     "register": "node --env-file-if-exists=.env scripts/register.js",
     "check": "node scripts/check.js",
     "test": "node --test",
+    "preview": "node scripts/preview.js",
     "test:postgres": "node --env-file-if-exists=.env --test test/postgres.test.js"
   },
   "dependencies": {
+    "@napi-rs/canvas": "1.0.11",
     "discord.js": "14.27.0",
     "pg": "8.23.1"
   }

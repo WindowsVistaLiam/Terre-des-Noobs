@@ -1,424 +1,348 @@
-import { RACES, CLASSES, RESOURCES, ZONES, RAIDS } from "./content.js";
+import { SlashCommandBuilder } from "discord.js";
 
-const choices = (entries) =>
-  Object.entries(entries).map(([value, item]) => ({
-    name: typeof item === "string" ? item : item.name,
-    value,
-  }));
-const str = (name, description, required = false, values) => ({
-  type: 3,
-  name,
-  description,
-  required,
-  ...(values ? { choices: values } : {}),
-});
-const int = (
-  name,
-  description,
-  required = false,
-  min = 1,
-  max = 1_000_000,
-) => ({ type: 4, name, description, required, min_value: min, max_value: max });
-const user = (name, description, required = false) => ({
-  type: 6,
-  name,
-  description,
-  required,
-});
-const sub = (name, description, options = []) => ({
-  type: 1,
-  name,
-  description,
-  options,
-});
-const cmd = (name, description, options = []) => ({
-  name,
-  description,
-  type: 1,
-  dm_permission: false,
-  options,
-});
-const resource = (required = true) =>
-  str("ressource", "Ressource", required, choices(RESOURCES));
-const item = (required = true) => ({
-  ...str("objet", "Identifiant de l’équipement (voir /inventaire)", required),
-  autocomplete: true,
-});
-const code = (name) => str("code", `Code de ${name}`, true);
-const slot = () =>
-  int("emplacement", "Emplacement de bâtiment, de 1 à 3", true, 1, 3);
 export const commands = [
-  cmd("jouer", "Ouvre ton carnet d’aventure"),
-  cmd("creer", "Crée ton aventurier de Brumeterre", [
-    str("nom", "Nom du personnage (2 à 24 caractères)", true),
-    str("race", "Ton peuple et son héritage", true, choices(RACES)),
-    str("classe", "Ta vocation et ta compétence", true, choices(CLASSES)),
-  ]),
-  cmd("profil", "Affiche un personnage", [
-    user("joueur", "Un ami à découvrir"),
-  ]),
-  cmd("aide", "Premiers pas et commandes du jeu"),
-  cmd("codex", "Feuillette les peuples, classes et secrets de Brumeterre", [
-    str(
-      "categorie",
-      "Chapitre du codex",
-      false,
-      choices({
-        races: "Peuples",
-        classes: "Classes",
-        batiments: "Bâtiments",
-        recettes: "Recettes",
-        raids: "Raids",
-        regles: "Règles",
-      }),
-    ),
-  ]),
-  cmd("carte", "Découvre les douze régions et ta progression"),
-  cmd("voyager", "Pars vers une région débloquée", [
-    {
-      type: 4,
-      name: "zone",
-      description: "Ta destination",
-      required: true,
-      choices: ZONES.map((z) => ({
-        name: `${z.emoji} ${z.name} · niv. ${z.level}`,
-        value: z.id,
-      })),
-    },
-  ]),
-  cmd("campagne", "Ouvre ton expédition et tes actions de combat"),
-  cmd("combat", "Joue un tour de ton combat en cours", [
-    str(
-      "action",
-      "Action à jouer",
-      true,
-      choices({
-        attack: "Attaquer",
-        skill: "Compétence",
-        guard: "Défendre (+10 mana)",
-        potion: "Potion de soin",
-        ether: "Éther",
-        flee: "Fuir (perte de 25 % de l’or du sac)",
-      }),
-    ),
-  ]),
-  cmd("rentrer", "Rentre au refuge et sécurise ton butin"),
-  cmd("base", "Gère tes trois emplacements et repose-toi", [
-    sub("voir", "Affiche ton refuge"),
-    sub("construire", "Construis un bâtiment", [
-      {
-        ...str("batiment", "Bâtiment commun ou exclusif à ton peuple", true),
-        autocomplete: true,
-      },
-      slot(),
-    ]),
-    sub("ameliorer", "Améliore un bâtiment jusqu’au niveau 5", [slot()]),
-    sub("demolir", "Démolis un bâtiment, rembourse 50 % de l’or investi", [
-      slot(),
-    ]),
-    sub("recolter", "Récupère la production de tes bâtiments"),
-    sub("repos", "Restaure PV et mana contre de l’or"),
-  ]),
-  cmd("inventaire", "Ton coffre, tes ressources et tes équipements"),
-  cmd("equiper", "Équipe un objet depuis ton coffre, à la base", [item()]),
-  cmd("retirer", "Retire un équipement, à la base", [
-    str(
-      "emplacement",
-      "Emplacement à libérer",
-      true,
-      choices({ weapon: "Arme", armor: "Armure", charm: "Talisman" }),
-    ),
-  ]),
-  cmd("utiliser", "Utilise une potion ou un éther hors combat", [
-    str(
-      "objet",
-      "Consommable",
-      true,
-      choices({ potion: "Potion de soin", ether: "Éther" }),
-    ),
-  ]),
-  cmd("talent", "Dépense un point gagné en montant de niveau", [
-    str(
-      "statistique",
-      "Entraînement permanent",
-      true,
-      choices({
-        attack: "Force : +2 attaque",
-        defense: "Robustesse : +2 défense",
-        power: "Arcanes : +2 puissance",
-        vitality: "Vitalité : +10 PV",
-      }),
-    ),
-  ]),
-  cmd(
-    "quotidien",
-    "Récupère tes provisions quotidiennes et entretiens ta série",
-  ),
-  cmd("quetes", "Consulte ou réclame tes contrats du jour", [
-    str(
-      "reclamer",
-      "Récompense à récupérer",
-      false,
-      choices({
-        kills: "Chasse aux ombres",
-        gather: "Les mains pleines",
-        craft: "Le feu de l’atelier",
-      }),
-    ),
-  ]),
-  cmd("atelier", "Fabrique, enchante ou recycle ton équipement", [
-    sub("recettes", "Consulte le livre de recettes"),
-    sub("fabriquer", "Fabrique un ou plusieurs lots", [
-      {
-        ...str(
-          "recette",
-          "Identifiant de la recette (/atelier recettes)",
-          true,
-        ),
-        autocomplete: true,
-      },
-      int("quantite", "Nombre de lots", false, 1, 20),
-    ]),
-    sub("enchanter", "Améliore un équipement (+5 maximum, forge requise)", [
-      item(),
-    ]),
-    sub("recycler", "Détruis un équipement pour récupérer fer et essence", [
-      item(),
-    ]),
-  ]),
-  cmd("marche", "Le marché global des aventuriers", [
-    sub("voir", "Parcours les annonces de tous les serveurs", [
-      int("page", "Page des annonces", false, 1, 10000),
-      resource(false),
-    ]),
-    sub("mes-annonces", "Consulte tes ventes actives"),
-    sub("vendre-ressource", "Mets un lot en vente pendant 7 jours", [
-      resource(),
-      int("quantite", "Quantité du lot", true, 1, 10000),
-      int("prix", "Prix TOTAL du lot (commission de 5 % à la vente)", true),
-    ]),
-    sub("vendre-objet", "Vends un équipement non porté", [
-      item(),
-      int("prix", "Prix total en or", true),
-    ]),
-    sub("acheter", "Achète un lot entier", [code("l’annonce")]),
-    sub("annuler", "Récupère ton lot invendu", [code("l’annonce")]),
-  ]),
-  cmd("donner", "Envoie de l’or ou une ressource à un ami", [
-    user("joueur", "Le destinataire", true),
-    int("or", "Or à donner"),
-    resource(false),
-    int("quantite", "Quantité de ressource", false, 1, 10000),
-  ]),
-  cmd("guilde", "Fonde une guilde et partage un trésor commun", [
-    sub("voir", "Ta guilde, ou les guildes qui recrutent", [
-      str("code", "Code d’une guilde"),
-    ]),
-    sub("creer", "Fonde une guilde pour 200 or", [
-      str("nom", "Nom de la guilde", true),
-    ]),
-    sub("rejoindre", "Rejoins une guilde ouverte", [code("la guilde")]),
-    sub("donner", "Verse de l’or au trésor commun", [
-      int("or", "Montant du don", true),
-    ]),
-    sub("ameliorer", "Chef : dépense 500 × niveau or pour renforcer la guilde"),
-    sub("quitter", "Quitte la guilde ; le chef transmet sa place"),
-  ]),
-  cmd("groupe", "Prépare un raid avec 2 à 4 amis", [
-    sub("voir", "Affiche ton groupe et son code de recrutement"),
-    sub("creer", "Crée un groupe de raid", [
-      {
-        type: 4,
-        name: "raid",
-        description: "Boss de raid",
-        required: true,
-        choices: RAIDS.map((r) => ({
-          name: `${r.name} · niv. ${r.level}`,
-          value: r.id,
-        })),
-      },
-    ]),
-    sub(
-      "rejoindre",
-      "Accepte le raid : le chef pourra engager 20 de ton énergie",
-      [code("groupe")],
-    ),
-    sub("quitter", "Quitte le groupe avant le lancement"),
-  ]),
-  cmd("raid", "Chef : lance le raid pour ton groupe (20 énergie, délai 24 h)"),
-  cmd("classement", "Les dix héros les plus avancés de Brumeterre"),
-];
+  new SlashCommandBuilder()
+    .setName("profil")
+    .setDescription("Ton héros, ton refuge, tes compagnons et tes aventures"),
+  new SlashCommandBuilder()
+    .setName("marché")
+    .setDescription("Marché, coffre, ressources, équipement et artisanat"),
+  new SlashCommandBuilder()
+    .setName("info")
+    .setDescription("Encyclopédie : races, classes, métiers, objets et règles"),
+].map((command) => ({ ...command.toJSON(), dm_permission: false }));
 
+export const NAVIGABLE = new Set([
+  "profile",
+  "welcome",
+  "creationRace",
+  "map",
+  "campaign",
+  "base",
+  "talents",
+  "quests",
+  "social",
+  "guildInfo",
+  "partyInfo",
+  "leaderboard",
+  "inventory",
+  "resources",
+  "market",
+  "crafting",
+  "store",
+  "guilds",
+  "parties",
+  "info",
+]);
+export const CATEGORIES = new Set([
+  "races",
+  "classes",
+  "metiers",
+  "items",
+  "batiments",
+  "recettes",
+  "raids",
+  "regles",
+]);
+export const FORM_KINDS = new Set([
+  "create",
+  "sellResource",
+  "sellItem",
+  "craft",
+  "guildCreate",
+  "guildJoin",
+  "guildDonate",
+  "partyJoin",
+  "giftGold",
+  "giftResource",
+  "shopBuy",
+]);
+
+export const uiId = (owner, action, ...args) =>
+  ["tdn", owner, action, ...args].join(":");
+export function parseId(customId, owner) {
+  if (typeof customId !== "string" || customId.length > 100) return null;
+  const [prefix, target, action, ...params] = customId.split(":");
+  return prefix === "tdn" && target === owner ? { action, params } : null;
+}
 export function routeCommand(interaction) {
-  const o = interaction.options;
-  const s = (name) => o.getString(name);
-  const n = (name, fallback) => o.getInteger(name) ?? fallback;
-  const subcommand = () => o.getSubcommand();
-  const result = (action, args = {}, extra = {}) => ({
+  return {
+    action:
+      { profil: "profile", marché: "market", info: "info" }[
+        interaction.commandName
+      ] ?? "info",
+    args: {},
+  };
+}
+const doActions = {
+  explore: () => ({}),
+  returnHome: () => ({}),
+  rest: () => ({}),
+  daily: () => ({}),
+  collect: () => ({}),
+  claimQuest: (a) => ({ questId: a }),
+  talent: (a) => ({ stat: a }),
+  consume: (a) => ({ resource: a }),
+  equip: (a) => ({ itemId: a }),
+  unequip: (a) => ({ slot: a }),
+  enchant: (a) => ({ itemId: a }),
+  salvage: (a) => ({ itemId: a }),
+  upgradeBuilding: (a) => ({ slot: Number(a) }),
+  demolish: (a) => ({ slot: Number(a) }),
+  build: (a, b) => ({ slot: Number(a), buildingId: b }),
+  buy: (a) => ({ listingId: a }),
+  cancelListing: (a) => ({ listingId: a }),
+  guildJoin: (a) => ({ guildId: a }),
+  guildUpgrade: () => ({}),
+  guildLeave: () => ({}),
+  partyCreate: (a) => ({ raidId: Number(a) }),
+  partyJoin: (a) => ({ partyId: a }),
+  partyLeave: () => ({}),
+  raid: () => ({}),
+};
+export function routeComponent(customId, owner, values = []) {
+  const parsed = parseId(customId, owner);
+  if (!parsed) return null;
+  const {
     action,
-    args,
-    ...extra,
-  });
-  switch (interaction.commandName) {
-    case "creer":
-      return result("create", {
-        name: s("nom"),
-        raceId: s("race"),
-        classId: s("classe"),
-      });
-    case "jouer":
-      return result("profile");
-    case "profil":
-      return result("profile", {}, { targetId: o.getUser("joueur")?.id });
-    case "aide":
-      return result("help");
+    params: [a, b, c],
+  } = parsed;
+  const selected = values[0];
+  switch (action) {
+    case "nav":
+      return NAVIGABLE.has(a)
+        ? { action: a, args: { page: Number(b ?? 1), mine: c === "mine" } }
+        : null;
+    case "chapter":
+      return CATEGORIES.has(selected)
+        ? { action: "codex", args: { category: selected, page: 1 } }
+        : null;
     case "codex":
-      return result("codex", { category: s("categorie") ?? "races", page: 1 });
-    case "carte":
-      return result("map");
-    case "voyager":
-      return result("travel", { zoneId: n("zone", 0) });
-    case "campagne":
-      return result("campaign");
-    case "combat":
-      return result("combat", { move: s("action") });
-    case "rentrer":
-      return result("returnHome");
-    case "base": {
-      const actions = {
-        voir: "base",
-        construire: "build",
-        ameliorer: "upgradeBuilding",
-        demolir: "demolish",
-        recolter: "collect",
-        repos: "rest",
+      return CATEGORIES.has(a)
+        ? { action: "codex", args: { category: a, page: Number(b ?? 1) } }
+        : null;
+    case "race":
+      return { action: "creationClass", args: { raceId: selected } };
+    case "class":
+      return {
+        action: "creationReview",
+        args: { raceId: a, classId: selected },
       };
-      return result(actions[subcommand()], {
-        buildingId: s("batiment"),
-        slot: n("emplacement"),
-      });
-    }
-    case "inventaire":
-      return result("inventory");
-    case "equiper":
-      return result("equip", { itemId: s("objet") });
-    case "retirer":
-      return result("unequip", { slot: s("emplacement") });
-    case "utiliser":
-      return result("consume", { resource: s("objet") });
-    case "talent":
-      return result("talent", { stat: s("statistique") });
-    case "quotidien":
-      return result("daily");
-    case "quetes":
-      return s("reclamer")
-        ? result("claimQuest", { questId: s("reclamer") })
-        : result("quests");
-    case "atelier": {
-      const actions = {
-        recettes: "codex",
-        fabriquer: "craft",
-        enchanter: "enchant",
-        recycler: "salvage",
+    case "classes":
+      return { action: "creationClass", args: { raceId: a } };
+    case "zone":
+      return { action: "travel", args: { zoneId: Number(selected) } };
+    case "fight":
+      return {
+        action: "combat",
+        args: { move: a, battleId: b, turn: Number(c) },
       };
-      return result(actions[subcommand()], {
-        category: "recettes",
-        recipeId: s("recette"),
-        quantity: n("quantite", 1),
-        itemId: s("objet"),
-      });
-    }
-    case "marche": {
-      const actions = {
-        voir: "market",
-        "mes-annonces": "market",
-        "vendre-ressource": "sell",
-        "vendre-objet": "sell",
-        acheter: "buy",
-        annuler: "cancelListing",
+    case "do":
+      return Object.hasOwn(doActions, a)
+        ? { action: a, args: doActions[a](b, c) }
+        : null;
+    case "item":
+      return { action: "item", args: { itemId: selected ?? a } };
+    case "slot":
+      return { action: "slot", args: { slot: Number(selected ?? a) } };
+    case "building":
+      return {
+        action: "building",
+        args: { slot: Number(a), buildingId: selected },
       };
-      return result(actions[subcommand()], {
-        mine: subcommand() === "mes-annonces",
-        page: n("page", 1),
-        resource: s("ressource"),
-        itemId: s("objet"),
-        quantity: n("quantite", 1),
-        price: n("prix"),
-        listingId: s("code"),
-      });
-    }
-    case "donner":
-      return result("gift", {
-        targetId: o.getUser("joueur").id,
-        gold: n("or", 0),
-        resource: s("ressource"),
-        quantity: n("quantite", 1),
-      });
-    case "guilde":
-      return result(
-        {
-          voir: "guildInfo",
-          creer: "guildCreate",
-          rejoindre: "guildJoin",
-          donner: "guildDonate",
-          ameliorer: "guildUpgrade",
-          quitter: "guildLeave",
-        }[subcommand()],
-        { guildId: s("code"), name: s("nom"), gold: n("or") },
-        { public: subcommand() === "voir" },
-      );
-    case "groupe":
-      return result(
-        {
-          voir: "partyInfo",
-          creer: "partyCreate",
-          rejoindre: "partyJoin",
-          quitter: "partyLeave",
-        }[subcommand()],
-        { partyId: s("code"), raidId: n("raid", 0) },
-        { public: ["voir", "creer", "rejoindre"].includes(subcommand()) },
-      );
+    case "recipe":
+      return { action: "recipe", args: { recipeId: selected ?? a } };
+    case "listing":
+      return { action: "listing", args: { listingId: selected ?? a } };
+    case "sellResource":
+      return { action: "form", kind: "sellResource", params: [selected] };
+    case "giftTarget":
+      return { action: "giftOptions", args: { targetId: selected } };
+    case "giftTargetMenu":
+      return { action: "giftOptions", args: {} };
+    case "giftResource":
+      return { action: "form", kind: "giftResource", params: [a, selected] };
+    case "guild":
+      return { action: "guildPreview", args: { guildId: selected ?? a } };
+    case "party":
+      return { action: "partyPreview", args: { partyId: selected ?? a } };
     case "raid":
-      return result("raid", {}, { public: true });
-    case "classement":
-      return result("leaderboard", {}, { public: true });
+      return { action: "raidPreview", args: { raidId: Number(selected ?? a) } };
+    case "shop":
+      return { action: "shopDetail", args: { resource: selected ?? a } };
+    case "confirm":
+      return [
+        "demolish",
+        "salvage",
+        "guildLeave",
+        "partyLeave",
+        "raid",
+      ].includes(a)
+        ? { action: "confirm", args: { kind: a, value: b } }
+        : null;
+    case "form":
+      return FORM_KINDS.has(a)
+        ? {
+            action: "form",
+            kind: a,
+            params: [b, c].filter((v) => v !== undefined),
+          }
+        : null;
     default:
-      return result("help");
+      return null;
   }
 }
+export const routeButton = routeComponent;
 
-export function routeButton(customId, viewerId) {
-  const [prefix, owner, action, a, b, c] = customId.split(":");
-  if (prefix !== "rpg" || owner !== viewerId) return null;
-  if (action === "combat")
-    return { action, args: { move: a, battleId: b, turn: Number(c) } };
-  if (action === "codex")
-    return { action, args: { category: a, page: Number(b) } };
-  if (action === "inventory") return { action, args: { page: Number(a) } };
-  if (action === "market")
-    return {
-      action,
-      args: { page: Number(a), mine: b === "1", resource: c || undefined },
-    };
-  if (action === "travel") return { action, args: { zoneId: Number(a) } };
-  if (action === "claimQuest") return { action, args: { questId: a } };
-  if (action === "buy" || action === "cancelListing")
-    return { action, args: { listingId: a } };
-  if (
-    [
-      "profile",
-      "campaign",
-      "map",
-      "base",
-      "explore",
-      "returnHome",
-      "rest",
-      "collect",
-      "daily",
-      "quests",
-      "help",
-    ].includes(action)
-  )
-    return { action, args: {} };
-  return null;
+const input = (
+  custom_id,
+  label,
+  { min = 1, max = 50, placeholder, value } = {},
+) => ({
+  type: 1,
+  components: [
+    {
+      type: 4,
+      custom_id,
+      label,
+      style: 1,
+      required: true,
+      min_length: min,
+      max_length: max,
+      ...(placeholder ? { placeholder } : {}),
+      ...(value ? { value } : {}),
+    },
+  ],
+});
+export function buildModal(owner, kind, params = []) {
+  if (!FORM_KINDS.has(kind)) return null;
+  const forms = {
+    create: [
+      "Nomme ton aventurier",
+      [
+        input("name", "Nom du personnage", {
+          min: 2,
+          max: 24,
+          placeholder: "Ex. Aelys",
+        }),
+      ],
+    ],
+    sellResource: [
+      "Mettre un lot en vente",
+      [
+        input("quantity", "Quantité du lot", { max: 5, value: "1" }),
+        input("price", "Prix TOTAL du lot en or", {
+          max: 7,
+          placeholder: "Commission vendeur : 5 %",
+        }),
+      ],
+    ],
+    sellItem: [
+      "Vendre cet équipement",
+      [
+        input("price", "Prix de vente en or", {
+          max: 7,
+          placeholder: "Commission vendeur : 5 %",
+        }),
+      ],
+    ],
+    craft: [
+      "Préparer la fabrication",
+      [input("quantity", "Nombre de lots (1 à 20)", { max: 2, value: "1" })],
+    ],
+    guildCreate: [
+      "Fonder une guilde · 200 or",
+      [input("name", "Nom de la guilde", { min: 3, max: 32 })],
+    ],
+    guildJoin: [
+      "Rejoindre une guilde",
+      [input("code", "Code de la guilde", { max: 12 })],
+    ],
+    guildDonate: [
+      "Contribuer au trésor",
+      [input("gold", "Montant du don en or", { max: 7 })],
+    ],
+    partyJoin: [
+      "Rejoindre un groupe",
+      [input("code", "Code du groupe (autorise le lancement)", { max: 12 })],
+    ],
+    giftGold: [
+      "Offrir de l’or",
+      [input("gold", "Montant du don en or", { max: 7 })],
+    ],
+    giftResource: [
+      "Offrir des ressources",
+      [input("quantity", "Quantité à offrir", { max: 5, value: "1" })],
+    ],
+    shopBuy: [
+      "Acheter des provisions",
+      [
+        input("quantity", "Quantité à acheter (1 à 100)", {
+          max: 3,
+          value: "1",
+        }),
+      ],
+    ],
+  };
+  const [title, components] = forms[kind];
+  return {
+    custom_id: uiId(owner, "submit", kind, ...params),
+    title,
+    components,
+  };
+}
+export function routeModal(customId, owner, fields) {
+  const parsed = parseId(customId, owner);
+  if (!parsed || parsed.action !== "submit") return null;
+  const [kind, a, b] = parsed.params;
+  const text = (key) => fields.getTextInputValue(key).trim();
+  const number = (key) => (/^\d+$/.test(text(key)) ? Number(text(key)) : NaN);
+  switch (kind) {
+    case "create":
+      return {
+        action: "create",
+        args: { raceId: a, classId: b, name: text("name") },
+      };
+    case "sellResource":
+      return {
+        action: "sell",
+        args: {
+          resource: a,
+          quantity: number("quantity"),
+          price: number("price"),
+        },
+      };
+    case "sellItem":
+      return {
+        action: "sell",
+        args: { itemId: a, quantity: 1, price: number("price") },
+      };
+    case "craft":
+      return {
+        action: "craft",
+        args: { recipeId: a, quantity: number("quantity") },
+      };
+    case "guildCreate":
+      return { action: "guildCreate", args: { name: text("name") } };
+    case "guildJoin":
+      return { action: "guildJoin", args: { guildId: text("code") } };
+    case "guildDonate":
+      return { action: "guildDonate", args: { gold: number("gold") } };
+    case "partyJoin":
+      return { action: "partyJoin", args: { partyId: text("code") } };
+    case "giftGold":
+      return { action: "gift", args: { targetId: a, gold: number("gold") } };
+    case "giftResource":
+      return {
+        action: "gift",
+        args: { targetId: a, resource: b, quantity: number("quantity") },
+      };
+    case "shopBuy":
+      return {
+        action: "shopBuy",
+        args: { resource: a, quantity: number("quantity") },
+      };
+    default:
+      return null;
+  }
 }

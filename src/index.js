@@ -66,7 +66,7 @@ async function main() {
     console.log(
       `Brumeterre est ouverte : ${ready.user.tag} · ${ready.guilds.cache.size} serveur(s).`,
     );
-    ready.user.setActivity("/jouer • Brumeterre vous attend", {
+    ready.user.setActivity("/profil • Brumeterre vous attend", {
       type: ActivityType.Playing,
     });
   });

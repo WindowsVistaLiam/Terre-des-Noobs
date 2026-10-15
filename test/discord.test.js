@@ -1,164 +1,111 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { commands, routeButton, routeCommand } from "../src/commands.js";
-import { render } from "../src/views.js";
-import { Game, statsOf } from "../src/game.js";
+import { ActionRowBuilder, ModalBuilder } from "discord.js";
+import {
+  commands,
+  routeButton,
+  routeCommand,
+  routeModal,
+  buildModal,
+  uiId,
+  FORM_KINDS,
+} from "../src/commands.js";
+import { buildView } from "../src/views.js";
+import { Game } from "../src/game.js";
 import { MemoryStore } from "../src/store.js";
 import { resolveRoute, createInteractionHandler } from "../src/controller.js";
 import { loadConfig } from "../src/config.js";
 import { createHealthServer } from "../src/health.js";
 
-function validatePayload(payload) {
-  assert.ok(payload.components.length <= 5);
-  for (const embed of payload.embeds) {
-    new EmbedBuilder(embed).toJSON();
-    const length =
-      (embed.title?.length ?? 0) +
-      (embed.description?.length ?? 0) +
-      (embed.footer?.text.length ?? 0) +
-      embed.fields.reduce((n, f) => n + f.name.length + f.value.length, 0);
-    assert.ok(length <= 6000, `Embed too long: ${length}`);
-    assert.ok(embed.fields.length <= 25);
-  }
-  for (const row of payload.components) {
-    assert.ok(row.components.length <= 5);
+export function validateComponents(components, owner) {
+  assert.ok(components.length <= 5, `Too many rows: ${components.length}`);
+  const ids = new Set();
+  for (const row of components) {
+    new ActionRowBuilder(row).toJSON();
+    assert.ok(row.components.length > 0 && row.components.length <= 5);
     for (const component of row.components) {
-      assert.ok(component.custom_id.length <= 100);
-      if (component.options) assert.ok(component.options.length <= 25);
+      assert.ok(component.custom_id.length <= 100, component.custom_id);
+      assert.ok(
+        !ids.has(component.custom_id),
+        `Duplicate ID: ${component.custom_id}`,
+      );
+      ids.add(component.custom_id);
+      if (component.options)
+        assert.ok(
+          component.options.length > 0 && component.options.length <= 25,
+        );
+      if (component.disabled) continue;
+      const values =
+        component.type === 5
+          ? ["other-player"]
+          : (component.options?.slice(0, 1).map((o) => o.value) ?? []);
+      assert.ok(
+        routeButton(component.custom_id, owner, values),
+        `Unroutable component: ${component.custom_id}`,
+      );
     }
   }
-  assert.deepEqual(payload.allowedMentions, { parse: [] });
 }
 
-test("les 25 commandes respectent les limites Discord et l’ordre des paramètres requis", () => {
-  assert.equal(commands.length, 25);
-  const names = new Set();
-  function checkOptions(options = []) {
-    assert.ok(options.length <= 25);
-    let optional = false;
-    for (const option of options) {
-      assert.ok(option.name.length <= 32);
-      assert.ok(option.description.length <= 100);
-      if (option.type !== 1) {
-        if (!option.required) optional = true;
-        else
-          assert.equal(
-            optional,
-            false,
-            `${option.name} après un argument optionnel`,
-          );
-      }
-      if (option.choices) assert.ok(option.choices.length <= 25);
-      if (option.options) checkOptions(option.options);
-    }
-  }
-  for (const command of commands) {
-    assert.ok(!names.has(command.name));
-    names.add(command.name);
-    assert.ok(command.description.length <= 100);
-    checkOptions(command.options);
-    const builder = new SlashCommandBuilder()
-      .setName(command.name)
-      .setDescription(command.description);
-    assert.equal(builder.toJSON().name, command.name);
-  }
+test("exactement trois commandes sans arguments : profil, marché et info", () => {
+  assert.deepEqual(
+    commands.map((c) => c.name),
+    ["profil", "marché", "info"],
+  );
+  for (const command of commands) assert.ok(!command.options?.length);
+  assert.equal(routeCommand({ commandName: "marché" }).action, "market");
 });
 
-test("boutons personnels : contrôle du propriétaire et contexte du tour", () => {
-  assert.equal(routeButton("rpg:alice:buy:lot", "bob"), null);
-  assert.deepEqual(routeButton("rpg:alice:combat:attack:abc:3", "alice"), {
-    action: "combat",
-    args: { move: "attack", battleId: "abc", turn: 3 },
-  });
-  assert.equal(routeButton("rpg:alice:unknown", "alice"), null);
-});
-
-test("tous les panneaux, pages et combats produisent des embeds valides", async () => {
-  const game = new Game(new MemoryStore(), { random: () => 0.5 });
-  let { p } = await game.execute("create", "alice", {
-    name: "Aelys",
-    raceId: "haut_elfe",
-    classId: "mage",
-  });
-  for (const action of [
-    "profile",
-    "inventory",
-    "quests",
-    "leaderboard",
-    "guildInfo",
-    "partyInfo",
-    "market",
-  ])
-    validatePayload(render(await game.execute(action, "alice"), "alice"));
-  for (const category of [
-    "races",
-    "classes",
-    "batiments",
-    "recettes",
-    "raids",
-    "regles",
-  ])
-    for (let page = 1; page <= 7; page++)
-      validatePayload(render({ p, type: "codex", category, page }, "alice"));
-  for (const type of ["base", "map", "campaign", "help"])
-    validatePayload(render({ p, type }, "alice"));
-  await game.execute("travel", "alice", { zoneId: 0 });
-  p = (await game.execute("explore", "alice")).p;
-  validatePayload(render({ p, type: "campaign" }, "alice"));
-  assert.equal(
-    render({ p, type: "profile" }, "bob", { readOnly: true }).components.length,
-    0,
+test("les boutons personnels contrôlent propriétaire, action autorisée et tour", () => {
+  assert.equal(routeButton(uiId("alice", "do", "buy", "lot"), "bob"), null);
+  assert.equal(routeButton(uiId("alice", "do", "create"), "alice"), null);
+  assert.equal(routeButton("rpg:alice:buy:lot", "alice"), null);
+  assert.equal(routeButton(uiId("alice", "nav", "nonexistent"), "alice"), null);
+  assert.deepEqual(
+    routeButton(uiId("alice", "fight", "attack", "battle", 3), "alice"),
+    { action: "combat", args: { move: "attack", battleId: "battle", turn: 3 } },
   );
 });
 
-test("panneaux publics : marché et guildes supportent le contenu long sans dépasser Discord", async () => {
-  const store = new MemoryStore();
-  const game = new Game(store);
-  await game.execute("create", "alice", {
-    name: "Aelys",
-    raceId: "humain",
-    classId: "guerrier",
-  });
-  await store.transaction(async (tx) => {
-    const p = await tx.get("player", "alice");
-    p.gear = Array.from({ length: 100 }, () => game.generateGear(50));
-    p.equipment = {};
-    await tx.set("player", "alice", p);
-  });
-  validatePayload(render(await game.execute("inventory", "alice"), "alice"));
-  for (const item of (await game.execute("inventory", "alice")).p.gear.slice(
-    0,
-    5,
-  ))
-    await game.execute("sell", "alice", { itemId: item.id, price: 1000000 });
-  validatePayload(render(await game.execute("market", "alice"), "alice"));
+test("tous les formulaires respectent le schéma Discord et sont liés à leur auteur", () => {
+  for (const kind of FORM_KINDS) {
+    const modal = buildModal("12345678901234567890", kind, [
+      "haut_elfe",
+      "chevalier_noir",
+    ]);
+    new ModalBuilder(modal).toJSON();
+    assert.ok(modal.custom_id.length <= 100);
+    assert.equal(
+      routeModal(modal.custom_id, "bob", { getTextInputValue: () => "1" }),
+      null,
+    );
+  }
+  assert.equal(buildModal("alice", "unknown"), null);
 });
 
-test("le contrôleur reprend les panneaux et permet un codex sans personnage", async () => {
+test("les champs numériques refusent notation scientifique, signes et décimales", () => {
+  const id = uiId("alice", "submit", "sellResource", "fer");
+  for (const quantity of ["-2", "1.5", "1e4", "Infinity", ""]) {
+    const route = routeModal(id, "alice", {
+      getTextInputValue: (key) => (key === "quantity" ? quantity : "10"),
+    });
+    assert.ok(Number.isNaN(route.args.quantity));
+  }
+});
+
+test("le codex reste accessible sans personnage et le marché accueille les nouveaux", async () => {
   const game = new Game(new MemoryStore());
   assert.equal(
-    (
-      await resolveRoute(
-        game,
-        { action: "codex", args: { category: "races" } },
-        "new",
-      )
-    ).type,
-    "codex",
+    (await resolveRoute(game, { action: "info" }, "new")).type,
+    "info",
   );
-  await game.execute("create", "alice", {
-    name: "Aelys",
-    raceId: "humain",
-    classId: "guerrier",
-  });
   assert.equal(
-    (await resolveRoute(game, { action: "map" }, "alice")).type,
-    "map",
+    (await resolveRoute(game, { action: "market" }, "new")).type,
+    "welcome",
   );
 });
 
-test("les configurations incomplètes et le mode démo en production échouent explicitement", () => {
+test("les configurations incomplètes et le mode démo en production échouent clairement", () => {
   assert.throws(() => loadConfig({}), /Variables manquantes/);
   assert.throws(
     () =>
@@ -170,13 +117,14 @@ test("les configurations incomplètes et le mode démo en production échouent e
       }),
     /interdit/,
   );
-  const config = loadConfig({
-    DISCORD_TOKEN: "x",
-    DISCORD_CLIENT_ID: "123456789012345678",
-    DEMO_MODE: "true",
-  });
-  assert.equal(config.port, 3000);
-  assert.equal(config.demo, true);
+  assert.equal(
+    loadConfig({
+      DISCORD_TOKEN: "x",
+      DISCORD_CLIENT_ID: "123456789012345678",
+      DEMO_MODE: "true",
+    }).demo,
+    true,
+  );
 });
 
 test("la disponibilité HTTP exige Discord connecté et une base joignable", async () => {
@@ -196,62 +144,172 @@ test("la disponibilité HTTP exige Discord connecté et une base joignable", asy
     assert.equal((await fetch(`${base}/health`)).status, 200);
     database = false;
     assert.equal((await fetch(`${base}/health`)).status, 503);
-    assert.equal((await fetch(`${base}/unknown`)).status, 404);
+    assert.equal((await fetch(`${base}/other`)).status, 404);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
 });
 
-test("un flux Discord réel simulé couvre création, menu, combat et erreurs privées", async () => {
-  const game = new Game(new MemoryStore(), { random: () => 0.5 });
-  const handler = createInteractionHandler(game);
-  const replies = [];
-  const interaction = (commandName, values = {}, extra = {}) => ({
-    id: `${commandName}-${Math.random()}`,
+const fixture = () => {
+  const calls = [];
+  const mock = (type, options = {}) => ({
+    id: `interaction-${Math.random()}`,
     user: { id: "alice" },
-    commandName,
+    commandName: "profil",
+    message: type === "command" ? undefined : { id: "panel-1" },
+    inGuild: () => true,
+    isChatInputCommand: () => type === "command",
+    isButton: () => type === "button",
+    isStringSelectMenu: () => type === "select",
+    isUserSelectMenu: () => type === "userSelect",
+    isModalSubmit: () => type === "modal",
+    isFromMessage: () => true,
     deferred: false,
     replied: false,
-    inGuild: () => true,
-    isAutocomplete: () => false,
-    isChatInputCommand: () => true,
-    isButton: () => false,
-    isStringSelectMenu: () => false,
-    options: {
-      getString: (key) => values[key] ?? null,
-      getInteger: (key) => values[key] ?? null,
-      getUser: () => null,
-      getSubcommand: () => values.subcommand,
-    },
-    async deferReply(payload) {
+    async deferReply(value) {
       this.deferred = true;
-      replies.push(payload);
+      calls.push(["deferReply", value]);
     },
-    async editReply(payload) {
-      validatePayload(payload);
-      replies.push(payload);
+    async deferUpdate() {
+      this.deferred = true;
+      calls.push(["deferUpdate"]);
     },
-    async reply(payload) {
+    async showModal(value) {
+      assert.equal(this.deferred, false);
       this.replied = true;
-      replies.push(payload);
+      calls.push(["modal", value]);
     },
-    ...extra,
+    async editReply(value) {
+      calls.push(["edit", value]);
+    },
+    async followUp(value) {
+      calls.push(["followUp", value]);
+    },
+    ...options,
+  });
+  const renderer = async (result, owner) => ({
+    ...buildView(result, owner),
+    result,
+  });
+  const game = new Game(new MemoryStore(), { random: () => 0.5 });
+  return {
+    calls,
+    mock,
+    game,
+    handler: createInteractionHandler(game, { renderer, cooldownMs: 0 }),
+  };
+};
+
+test("parcours Discord complet : accueil, race, classe, formulaire et création sans autre slash", async () => {
+  const { calls, mock, handler, game } = fixture();
+  await handler(mock("command"));
+  assert.equal(calls.at(-1)[1].result.type, "welcome");
+  await handler(
+    mock("button", { customId: uiId("alice", "nav", "creationRace") }),
+  );
+  await handler(
+    mock("select", { customId: uiId("alice", "race"), values: ["haut_elfe"] }),
+  );
+  assert.equal(calls.at(-1)[1].result.raceId, "haut_elfe");
+  await handler(
+    mock("select", {
+      customId: uiId("alice", "class", "haut_elfe"),
+      values: ["mage"],
+    }),
+  );
+  await handler(
+    mock("button", {
+      customId: uiId("alice", "form", "create", "haut_elfe", "mage"),
+    }),
+  );
+  const modal = calls.at(-1)[1];
+  assert.equal(calls.at(-1)[0], "modal");
+  await handler(
+    mock("modal", {
+      customId: modal.custom_id,
+      fields: { getTextInputValue: () => "Aelys" },
+    }),
+  );
+  assert.equal(calls.at(-1)[1].result.type, "profile");
+  assert.equal((await game.execute("profile", "alice")).p.classId, "mage");
+  assert.ok(calls.some(([kind]) => kind === "deferUpdate"));
+});
+
+test("une erreur de bouton conserve le panneau et répond avec un panneau privé", async () => {
+  const { calls, mock, handler, game } = fixture();
+  await game.execute("create", "alice", {
+    name: "Aelys",
+    raceId: "humain",
+    classId: "guerrier",
   });
   await handler(
-    interaction("creer", { nom: "Aelys", race: "humain", classe: "guerrier" }),
+    mock("button", { customId: uiId("alice", "do", "buy", "missing") }),
   );
-  assert.equal(replies[0].flags, 64);
-  assert.ok(replies[1].embeds[0].title.includes("Aelys"));
-  const stranger = interaction(
-    "jouer",
-    {},
-    {
-      user: { id: "bob" },
-      isChatInputCommand: () => false,
-      isButton: () => true,
-      customId: "rpg:alice:explore",
+  assert.equal(calls.at(-1)[0], "followUp");
+  assert.equal(calls.at(-1)[1].flags, 64);
+  assert.equal(calls.at(-1)[1].result.type, "error");
+});
+
+test("un autre joueur reçoit son propre panneau sans modifier celui du propriétaire", async () => {
+  const { calls, mock, handler } = fixture();
+  await handler(mock("button", { customId: uiId("bob", "nav", "profile") }));
+  assert.equal(calls[0][0], "deferReply");
+  assert.equal(calls[0][1].flags, 64);
+  assert.equal(calls.at(-1)[1].result.type, "error");
+});
+
+test("les menus de sélection de membre dirigent vers les cadeaux", async () => {
+  const { calls, mock, handler, game } = fixture();
+  for (const id of ["alice", "bob"])
+    await game.execute("create", id, {
+      name: "Veilleur",
+      raceId: "humain",
+      classId: "guerrier",
+    });
+  await handler(
+    mock("userSelect", {
+      customId: uiId("alice", "giftTarget"),
+      values: ["bob"],
+    }),
+  );
+  assert.equal(calls.at(-1)[1].result.target.id, "bob");
+});
+
+test("une ancienne image lente ne remplace pas la navigation plus récente", async () => {
+  const { game, mock, calls } = fixture();
+  await game.execute("create", "alice", {
+    name: "Aelys",
+    raceId: "humain",
+    classId: "guerrier",
+  });
+  let release, started;
+  const waiting = new Promise((resolve) => {
+    release = resolve;
+  });
+  const rendering = new Promise((resolve) => {
+    started = resolve;
+  });
+  const handler = createInteractionHandler(game, {
+    cooldownMs: 0,
+    renderer: async (result) => {
+      if (result.type === "profile") {
+        started();
+        await waiting;
+      }
+      return { type: result.type };
     },
+  });
+  const older = handler(
+    mock("button", { customId: uiId("alice", "nav", "profile") }),
   );
-  await handler(stranger);
-  assert.ok(replies.at(-1).content.includes("autre aventurier"));
+  await rendering;
+  await handler(mock("button", { customId: uiId("alice", "nav", "market") }));
+  release();
+  await older;
+  assert.deepEqual(
+    calls
+      .filter(([kind]) => kind === "edit")
+      .map(([, payload]) => payload.type),
+    ["market"],
+  );
 });

@@ -2,9 +2,13 @@
 
 ## Composants
 
-Node.js ESM, discord.js 14, node-postgres. Le bot maintient une connexion Gateway avec l’intent `Guilds` uniquement. Aucun accès au contenu des messages, liste complète des membres, dashboard public ou webhook d’interactions n’est nécessaire.
+Node.js ESM, discord.js 14, node-postgres et `@napi-rs/canvas`. Le bot maintient une connexion Gateway avec l’intent `Guilds` uniquement. Aucun accès au contenu des messages, liste complète des membres, dashboard public ou webhook d’interactions n’est nécessaire.
 
-`content.js` décrit l’univers. `game.js` applique les règles sans dépendance à Discord. `commands.js` définit et traduit les interactions. `controller.js` accuse réception avant les opérations de base et traite les erreurs. `views.js` génère les panneaux. `store.js` assure les transactions.
+`content.js` décrit l’univers. `game.js` applique les règles sans dépendance à Discord. `commands.js` définit les trois commandes et traduit boutons, listes et formulaires. `controller.js` accuse réception avant les opérations de base et le rendu ; un formulaire est ouvert avant tout accusé de réception. `views.js` construit le contenu sémantique des écrans et les contrôles ; `canvas.js` les rend en PNG. `store.js` assure les transactions.
+
+Les parcours ne reposent sur aucun collecteur temporaire ou session en mémoire. Les identifiants des composants contiennent leur propriétaire, leur action et leur contexte minimal. Les menus restent donc utilisables après redémarrage, à données persistantes identiques. Le parcours de création porte ses choix de race et classe jusqu’au formulaire du nom. Les boutons de confirmation précèdent la démolition, le recyclage, le départ d’une guilde ou d’un groupe et le lancement d’un raid.
+
+Les panneaux sont privés. Une erreur dans un bouton répond par une image privée sans remplacer le panneau initial. Un formulaire issu d’un message met à jour ce même message. Chaque remplacement efface les anciennes pièces jointes et charge un seul PNG. Les images restent sous la limite des pièces jointes et incluent une description alternative. Le marchand est un puits d’or à prix fixes ; seuls les joueurs vendent des équipements.
 
 ## Persistance
 
@@ -42,6 +46,6 @@ SIGINT et SIGTERM ferment le client Discord, le serveur et le pool PostgreSQL. L
 
 ## Vérification
 
-Les tests couvrent les 288 combinaisons d’identité, les invariants d’économie, annulations de transactions, progression et combats, récupération hors ligne, guildes, raids, déduplication, limites des embeds et permissions des boutons. Le test PostgreSQL utilise deux pools concurrents, vérifie le rollback et recrée une connexion pour vérifier la persistance. GitHub Actions l’exécute contre PostgreSQL 17.
+Les tests couvrent les 288 combinaisons d’identité et de menus de création, les invariants d’économie, annulations de transactions, progression et combats, récupération hors ligne, guildes, raids, déduplication, schémas Discord, propriétaire des composants, formulaires et parcours complets sans commande supplémentaire. Les rendus Canvas sont produits et décodés, avec vérification des dimensions, de la taille des fichiers, des textes longs et de l’absence de débordement des cartes. Le test PostgreSQL utilise deux pools concurrents, vérifie le rollback et recrée une connexion pour vérifier la persistance. GitHub Actions l’exécute contre PostgreSQL 17 puis construit et teste le rendu dans le conteneur de production.
 
 Le flux Discord est testé par des interactions simulées ; ces tests ne remplacent pas un essai sur serveur réel avec le token et les permissions effectives. Aucun secret n’est requis pour les tests de logique.
