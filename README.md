@@ -4,6 +4,8 @@ Un RPG Discord social en français, avec des **menus en images Canvas** et **qua
 
 > La cloche de Rosée a sonné sans sonneur. Les routes disparaissent dans la Brume. Bâtissez un refuge, rassemblez vos compagnons et retrouvez le Roi oublié.
 
+Pour accueillir les joueurs : [six fiches de tutoriel en images](docs/tutorial/LIRE-MOI.md), [message d’annonce Discord](docs/tutorial/annonce-discord.txt) et [kit complet à télécharger](docs/Terre-des-Noobs-kit-joueur.zip). Les fiches sont dessinées en Canvas avec des formes, pictogrammes et textes, sans illustrations générées par IA. `npm run tutorial` les régénère.
+
 ## Quatre portes d’entrée, tout le reste dans les menus
 
 | Commande      | Ce qu’on y trouve                                                                                                                     |

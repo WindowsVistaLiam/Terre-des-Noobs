@@ -1,0 +1,23 @@
+⚔️ **TERRE DES NOOBS — Les Chroniques de Brumeterre**
+
+Un RPG entre potes débarque sur le serveur : crée ton héros, explore la Brume, récupère du butin et construis ta place dans le monde. On pourra commercer, former des guildes, défendre notre cité et régler nos comptes dans la lice !
+
+**Pour commencer :**
+1. Lance **/profil**, puis **Mon carnet privé → Créer mon aventurier**.
+2. Choisis ton peuple, ta classe et ton nom : **16 peuples et 18 classes**.
+3. Prépare ton équipement, puis pars à l’aventure depuis ton carnet.
+
+**Les quatre commandes à retenir :**
+🧙 **/profil** : ton héros, l’aventure, le refuge et les talents.
+🪙 **/marché** : achats, ventes, coffre et artisanat.
+🤝 **/social** : amis, duels, guildes, raids et défense de cité.
+📖 **/info** : races, classes, objets et règles du jeu.
+Tout le reste passe par les boutons et les menus.
+
+💡 **Conseil du départ :** fabrique et équipe la *Protection du voyageur* à l’atelier. Les ennemis ne sont pas là pour décorer : mieux vaut rentrer préparer son héros que perdre son sac !
+
+🏰 Donnez un coup de main à la guilde, repoussez les invasions ensemble ou défiez vos amis en duel. Les duels demandent un accord et ne coûtent ni objets ni or.
+
+Les grandes actions apparaissent dans le salon. Pour voir un autre héros : **/profil joueur:@ami**. Les coffres et les demandes personnelles restent privés.
+
+📌 Les **6 fiches du tutoriel** expliquent le départ, les combats, le marché et le jeu en groupe. Gardez-les sous la main et partagez vos retours : l’équilibrage évoluera avec nos parties !
