@@ -1,4 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
+import { socialMethods, normalizeSocial } from "./social-game.js";
 import {
   RACES,
   CLASSES,
@@ -17,6 +18,7 @@ import {
   dayKey,
   buildingCost,
   SHOP,
+  VICTORIES_FOR_BOSS,
 } from "./content.js";
 
 export class GameError extends Error {}
@@ -126,6 +128,7 @@ export class Game {
       "partyInfo",
       "raid",
       "shopBuy",
+      ...Object.keys(socialMethods),
     ]);
     ensure(handlers.has(action), "Action inconnue.");
     return this.store.transaction(async (tx) => {
@@ -133,6 +136,10 @@ export class Game {
       if (requestId && (await tx.get("interaction", requestId)))
         return { duplicate: true };
       const result = await this[action](tx, userId, args, now);
+      if (result.p?.id === userId) {
+        result.p.lastActiveAt = now;
+        await this.save(tx, result.p);
+      }
       if (requestId)
         await tx.set("interaction", requestId, {
           id: requestId,
@@ -151,6 +158,7 @@ export class Game {
       p.schemaVersion === 1,
       "Cette sauvegarde nécessite une migration. Contacte l’administrateur.",
     );
+    normalizeSocial(p);
     const s = statsOf(p);
     const energyTicks = Math.max(
       0,
@@ -187,6 +195,7 @@ export class Game {
     ensure(!p.battle, "Termine le combat depuis Profil → Aventure.");
   }
   async save(tx, p) {
+    normalizeSocial(p);
     await tx.set("player", p.id, p);
   }
   spend(p, gold, resources = {}) {
@@ -378,7 +387,7 @@ export class Game {
     p.energy -= 5;
     const zone = ZONES[p.zone];
     const roll = this.random();
-    const boss = (p.zoneWins[p.zone] ?? 0) >= 3;
+    const boss = (p.zoneWins[p.zone] ?? 0) >= VICTORIES_FOR_BOSS;
     if (!boss && roll < 0.12) {
       const qty = 3 + Math.floor(this.random() * 4);
       add(p.bag.resources, { [zone.resource]: qty, pierre: 2 });
@@ -394,7 +403,7 @@ export class Game {
     const elite = !boss && roll > 0.88;
     const level = zone.level + (boss ? 2 : elite ? 1 : 0);
     const scale = boss ? 2.2 : elite ? 1.5 : 1;
-    const hp = Math.round((35 + level * 12) * scale);
+    const hp = Math.round((82 + level * 28) * scale);
     p.battle = {
       id: shortId(),
       turn: 1,
@@ -409,10 +418,8 @@ export class Game {
         elite,
         hp,
         maxHp: hp,
-        attack: Math.round(
-          (7 + level * 2.3) * (boss ? 1.25 : elite ? 1.12 : 1),
-        ),
-        defense: 1 + level * 1.1,
+        attack: Math.round((11 + level * 3) * (boss ? 1.25 : elite ? 1.12 : 1)),
+        defense: 3 + level * 1.5,
       },
     };
     await this.save(tx, p);
@@ -587,12 +594,12 @@ export class Game {
     const factor = e.boss ? 3 : e.elite ? 1.6 : 1;
     const guild = p.guildId ? await tx.get("guild", p.guildId) : null;
     const xp = Math.round(
-      (35 + e.level * 15) *
+      (80 + e.level * 20) *
         factor *
         (1 + s.xp + (event.xp ?? 0) + (guild ? guild.level * 0.02 : 0)),
     );
     const gold = Math.round(
-      (18 + e.level * 7) * factor * (1 + s.gold + (event.gold ?? 0)),
+      (30 + e.level * 10) * factor * (1 + s.gold + (event.gold ?? 0)),
     );
     p.bag.gold += gold;
     const qty = Math.ceil((2 + this.random() * 3) * factor);
@@ -1105,6 +1112,11 @@ export class Game {
     );
     const target = await this.player(tx, targetId, now);
     ensure(
+      !p.social.blocked.includes(targetId) &&
+        !target.social.blocked.includes(id),
+      "Les cadeaux avec cet aventurier ne sont pas disponibles.",
+    );
+    ensure(
       !resource || (RESOURCES[resource] && resource !== "insigne"),
       "Ressource non échangeable.",
     );
@@ -1235,6 +1247,9 @@ export class Game {
     const guild = await tx.get("guild", p.guildId ?? "");
     ensure(guild, "Tu n’as pas de guilde.");
     guild.members = guild.members.filter((uid) => uid !== id);
+    if (guild.officers)
+      guild.officers = guild.officers.filter((uid) => uid !== id);
+    if (guild.city?.guards) delete guild.city.guards[id];
     if (!guild.members.length) await tx.delete("guild", guild.id);
     else {
       if (guild.leaderId === id) guild.leaderId = guild.members[0];
@@ -1456,3 +1471,4 @@ export class Game {
     };
   }
 }
+Object.assign(Game.prototype, socialMethods);

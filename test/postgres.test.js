@@ -50,12 +50,38 @@ test(
       ]);
       assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
       assert.equal((await gb.execute("profile", "seller")).p.gold, 169);
+      await ga.execute("friendRequest", "seller", { targetId: "one" });
+      const social = await Promise.allSettled(
+        [ga, gb].map((game) =>
+          game.execute("friendRespond", "one", {
+            requestId: "seller.one",
+            response: "accept",
+          }),
+        ),
+      );
+      assert.equal(social.filter((r) => r.status === "fulfilled").length, 1);
+      await ga.execute("daily", "seller");
+      const { guild } = await ga.execute("guildCreate", "seller", {
+        name: "Les Veilleurs",
+      });
+      await gb.execute("guildJoin", "one", { guildId: guild.id });
+      await gb.execute("cityDonate", "one", { resource: "bois", quantity: 10 });
+      const goldAfterSocial = (await ga.execute("profile", "seller")).p.gold;
       await a.close();
       a = new PostgresStore(url, options);
       await a.init();
       assert.equal(
         (await new Game(a).execute("profile", "seller")).p.gold,
-        169,
+        goldAfterSocial,
+      );
+      assert.deepEqual(
+        (await new Game(a).execute("profile", "seller")).p.social.friends,
+        ["one"],
+      );
+      assert.equal(
+        (await new Game(a).execute("cityInfo", "seller")).guild.city.resources
+          .bois,
+        10,
       );
     } finally {
       if (a) await a.close();

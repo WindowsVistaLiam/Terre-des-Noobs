@@ -10,6 +10,9 @@ export const commands = [
   new SlashCommandBuilder()
     .setName("info")
     .setDescription("Encyclopédie : races, classes, métiers, objets et règles"),
+  new SlashCommandBuilder()
+    .setName("social")
+    .setDescription("Amis, duels, guildes, cité et défense entre compagnons"),
 ].map((command) => ({ ...command.toJSON(), dm_permission: false }));
 
 export const NAVIGABLE = new Set([
@@ -33,6 +36,16 @@ export const NAVIGABLE = new Set([
   "guilds",
   "parties",
   "info",
+  "friends",
+  "inbox",
+  "directory",
+  "blocked",
+  "duels",
+  "pvpLeaderboard",
+  "city",
+  "cityDefensePlan",
+  "cityTargets",
+  "guildRoster",
 ]);
 export const CATEGORIES = new Set([
   "races",
@@ -56,6 +69,8 @@ export const FORM_KINDS = new Set([
   "giftGold",
   "giftResource",
   "shopBuy",
+  "cityDonate",
+  "guildBulletin",
 ]);
 
 export const uiId = (owner, action, ...args) =>
@@ -68,7 +83,7 @@ export function parseId(customId, owner) {
 export function routeCommand(interaction) {
   return {
     action:
-      { profil: "profile", marché: "market", info: "info" }[
+      { profil: "profile", marché: "market", info: "info", social: "social" }[
         interaction.commandName
       ] ?? "info",
     args: {},
@@ -99,6 +114,22 @@ const doActions = {
   partyJoin: (a) => ({ partyId: a }),
   partyLeave: () => ({}),
   raid: () => ({}),
+  friendRequest: (a) => ({ targetId: a }),
+  friendRespond: (a, b) => ({ requestId: a, response: b }),
+  friendRemove: (a) => ({ targetId: a }),
+  blockPlayer: (a) => ({ targetId: a }),
+  unblockPlayer: (a) => ({ targetId: a }),
+  duelChallenge: (a) => ({ targetId: a }),
+  duelRespond: (a, b) => ({ duelId: a, response: b }),
+  guildInvite: (a) => ({ targetId: a }),
+  guildInviteRespond: (a, b) => ({ invitationId: a, response: b }),
+  guildManage: (a, b) => ({ targetId: a, operation: b }),
+  cityUpgrade: (a) => ({ buildingId: a }),
+  cityGuard: () => ({}),
+  cityDefense: (a) => ({ role: a }),
+  cityClaim: () => ({}),
+  cityWarToggle: () => ({}),
+  citySiege: (a) => ({ guildId: a }),
 };
 export function routeComponent(customId, owner, values = []) {
   const parsed = parseId(customId, owner);
@@ -138,6 +169,11 @@ export function routeComponent(customId, owner, values = []) {
         args: { move: a, battleId: b, turn: Number(c) },
       };
     case "do":
+      if (a === "guildKick")
+        return {
+          action: "guildManage",
+          args: { targetId: b, operation: "kick" },
+        };
       return Object.hasOwn(doActions, a)
         ? { action: a, args: doActions[a](b, c) }
         : null;
@@ -160,6 +196,27 @@ export function routeComponent(customId, owner, values = []) {
       return { action: "giftOptions", args: { targetId: selected } };
     case "giftTargetMenu":
       return { action: "giftOptions", args: {} };
+    case "giftFor":
+      return { action: "giftOptions", args: { targetId: a } };
+    case "player":
+      return { action: "playerCard", args: { targetId: selected ?? a } };
+    case "guildMember":
+      return { action: "guildMember", args: { targetId: selected ?? a } };
+    case "duelEntry":
+      return { action: "duel", args: { duelId: selected ?? a } };
+    case "cityPlan":
+      return { action: "cityPlan", args: { buildingId: selected ?? a } };
+    case "cityDonate":
+      return { action: "form", kind: "cityDonate", params: [selected] };
+    case "siegeTarget":
+      return { action: "siegePreview", args: { guildId: selected ?? a } };
+    case "notification": {
+      const [kind, key] = (selected ?? "").split("|");
+      if (kind === "duel") return { action: "duel", args: { duelId: key } };
+      if (["friend", "guild"].includes(kind))
+        return { action: "requestPreview", args: { kind, key } };
+      return null;
+    }
     case "giftResource":
       return { action: "form", kind: "giftResource", params: [a, selected] };
     case "guild":
@@ -177,6 +234,11 @@ export function routeComponent(customId, owner, values = []) {
         "guildLeave",
         "partyLeave",
         "raid",
+        "friendRemove",
+        "blockPlayer",
+        "guildKick",
+        "cityWarToggle",
+        "citySiege",
       ].includes(a)
         ? { action: "confirm", args: { kind: a, value: b } }
         : null;
@@ -283,6 +345,24 @@ export function buildModal(owner, kind, params = []) {
         }),
       ],
     ],
+    cityDonate: [
+      "Matériaux pour la cité",
+      [
+        input("quantity", "Quantité à donner (1 à 10 000)", {
+          max: 5,
+          value: "1",
+        }),
+      ],
+    ],
+    guildBulletin: [
+      "Le message de votre guilde",
+      [
+        input("text", "Message de guilde (3 à 180 caractères)", {
+          min: 3,
+          max: 180,
+        }),
+      ],
+    ],
   };
   const [title, components] = forms[kind];
   return {
@@ -342,6 +422,13 @@ export function routeModal(customId, owner, fields) {
         action: "shopBuy",
         args: { resource: a, quantity: number("quantity") },
       };
+    case "cityDonate":
+      return {
+        action: "cityDonate",
+        args: { resource: a, quantity: number("quantity") },
+      };
+    case "guildBulletin":
+      return { action: "guildBulletin", args: { text: text("text") } };
     default:
       return null;
   }

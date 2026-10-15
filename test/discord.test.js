@@ -47,10 +47,10 @@ export function validateComponents(components, owner) {
   }
 }
 
-test("exactement trois commandes sans arguments : profil, marché et info", () => {
+test("quatre commandes sans arguments : profil, marché, info et social", () => {
   assert.deepEqual(
     commands.map((c) => c.name),
-    ["profil", "marché", "info"],
+    ["profil", "marché", "info", "social"],
   );
   for (const command of commands) assert.ok(!command.options?.length);
   assert.equal(routeCommand({ commandName: "marché" }).action, "market");

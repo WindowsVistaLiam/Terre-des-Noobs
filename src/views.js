@@ -12,10 +12,13 @@ import {
   xpRequired,
   buildingCost,
   worldEvent,
+  VICTORIES_FOR_BOSS,
 } from "./content.js";
 import { statsOf, gearLabel } from "./game.js";
 import { drawPanel, plainText } from "./canvas.js";
 import { uiId } from "./commands.js";
+import { RACE_COLORS, SOCIAL_TYPES } from "./social-content.js";
+import { buildSocialView } from "./social-views.js";
 
 const slotName = { weapon: "Arme", armor: "Armure", charm: "Talisman" };
 const chapterNames = {
@@ -77,10 +80,15 @@ const gearCard = (item, equipped = false) =>
 export function codexEntries(category, p) {
   switch (category) {
     case "races":
-      return Object.values(RACES).map((r) =>
+      return Object.entries(RACES).map(([key, r]) =>
         card(
           r.name,
           `${r.lore}\n${statText(r.bonuses)}\nHéritage : ${BUILDINGS[r.building].name}`,
+          {
+            textColor: RACE_COLORS[key],
+            titleColor: RACE_COLORS[key],
+            accent: RACE_COLORS[key],
+          },
         ),
       );
     case "classes":
@@ -172,12 +180,12 @@ export function codexEntries(category, p) {
     default:
       return [
         card(
-          "Tes trois portes d’entrée",
-          "Profil : héros, aventure, refuge, talents et compagnons.\nMarché : équipement, matériaux, échanges et artisanat.\nInfo : l’encyclopédie et ce guide.\nTout le reste se joue avec les menus.",
+          "Tes quatre portes d’entrée",
+          "Profil : héros, aventure, refuge et talents.\nSocial : amis, duels, guildes et cité.\nMarché : équipement, échanges et artisanat.\nInfo : l’encyclopédie et ce guide.\nTout le reste se joue avec les menus.",
         ),
         card(
           "Prendre la route",
-          "Choisis une région sur la carte. Trois victoires font apparaître son gardien. Le vaincre ouvre la route suivante ; son niveau minimal reste requis. Rejoue les zones accessibles pour progresser.",
+          "Deux victoires font apparaître le gardien. Chaque ennemi est résistant : prépare ton équipement et tes bâtiments. Fabrique la Protection du voyageur dès le départ. Le gardien ouvre la route suivante, sous réserve du niveau requis.",
         ),
         card(
           "Combattre",
@@ -200,6 +208,18 @@ export function codexEntries(category, p) {
           "Guildes ouvertes de 30 membres, trésor partagé et +2 % XP par niveau. Les groupes réunissent 2 à 4 aventuriers. En rejoignant, tu autorises le chef à lancer le raid pour 20 énergie. Reste à la base avec 50 % de tes PV.",
         ),
         card(
+          "Amitiés & duels",
+          "Social → Réception rassemble demandes d’amis, invitations et défis. Les duels demandent votre accord et simulent un combat à pleine vie sans consommer vos ressources. Un duel par minute ; les défis expirent après 15 minutes. Le blocage empêche les échanges directs.",
+        ),
+        card(
+          "Votre cité & les invasions",
+          "Donnez or et matériaux, puis améliorez quatre constructions communes. À partir de deux membres, participez à l’invasion du jour : trois sorties chacun, espacées de cinq minutes, pour 10 énergie et 10 % des PV maximaux. Après la victoire, chaque participant réclame une récompense quotidienne.",
+        ),
+        card(
+          "Gardes & sièges entre guildes",
+          "Une garde protège la cité pendant 24 h pour 10 énergie. Les deux guildes doivent activer les sièges et avoir au plus deux niveaux d’écart. Attaquer coûte 120 or commun et 15 énergie. Récupération et protection : six heures. Les bâtiments et les coffres sont protégés ; l’intégrité se répare avec le temps.",
+        ),
+        card(
           "Le passage du temps",
           "Provisions, contrats et événements mondiaux changent à minuit UTC. Les raids ont un délai glissant de 24 heures entre deux tentatives. Les combats et groupes persistent dans les sauvegardes PostgreSQL.",
         ),
@@ -215,6 +235,42 @@ export function buildView(result, owner) {
     subtitle: "Les routes se souviennent de vos pas.",
     tone: "gold",
     cards: [],
+    background:
+      SOCIAL_TYPES.has(result.type) ||
+      [
+        "request",
+        "blocked",
+        "guildRoster",
+        "cityDefensePlan",
+        "confirmSocial",
+      ].includes(result.type) ||
+      (result.type === "confirm" &&
+        [
+          "friendRemove",
+          "blockPlayer",
+          "guildKick",
+          "cityWarToggle",
+          "citySiege",
+          "guildLeave",
+          "partyLeave",
+          "raid",
+        ].includes(result.kind))
+        ? "social"
+        : [
+              "market",
+              "listing",
+              "inventory",
+              "resources",
+              "item",
+              "crafting",
+              "recipe",
+              "store",
+              "shopDetail",
+            ].includes(result.type)
+          ? "market"
+          : ["info", "codex"].includes(result.type)
+            ? "info"
+            : "profile",
     ...(message ? { notice: message } : {}),
   };
   const components = [];
@@ -250,6 +306,7 @@ export function buildView(result, owner) {
     push(
       row(
         nav("◈ Profil", "profile"),
+        nav("♜ Social", "social"),
         nav("⚖ Marché", "market"),
         nav("✧ Info", "info"),
       ),
@@ -304,6 +361,25 @@ export function buildView(result, owner) {
     ];
   };
 
+  if (
+    buildSocialView(result, owner, {
+      screen,
+      card,
+      row,
+      choice,
+      btn,
+      nav,
+      act,
+      push,
+      select,
+      pages,
+      back,
+      id,
+    })
+  ) {
+    footer();
+    return { screen, components };
+  }
   switch (result.type) {
     case "welcome":
       screen.title = "La Brume t’attend";
@@ -553,7 +629,7 @@ export function buildView(result, owner) {
         );
       } else {
         screen.title = z.name;
-        screen.subtitle = `Expédition en cours · ${Math.min(3, p.zoneWins[p.zone] ?? 0)} / 3 victoires vers le gardien`;
+        screen.subtitle = `Expédition en cours · ${Math.min(VICTORIES_FOR_BOSS, p.zoneWins[p.zone] ?? 0)} / ${VICTORIES_FOR_BOSS} victoires vers le gardien`;
         screen.cards = [
           card("La chronique", z.story),
           card(
@@ -563,7 +639,7 @@ export function buildView(result, owner) {
           ),
           card(
             "Continuer ou rentrer ?",
-            "Tes PV et ton mana persistent entre les rencontres. Rentrer met tout le butin à l’abri. Le gardien apparaît après trois combats gagnés.",
+            "Chaque ennemi demande de la préparation. Construis une caserne ou des remparts et fabrique la Protection du voyageur avant de progresser. Rentrer met ton butin à l’abri. Le gardien apparaît après deux victoires.",
           ),
           card(
             "Le risque de la Brume",
@@ -1281,10 +1357,17 @@ export function buildView(result, owner) {
             card(
               "Les compagnons",
               result.members
+                .slice(0, 6)
                 .map((m) => `${m.name} · niveau ${m.level}`)
                 .join("\n"),
             ),
           );
+        screen.cards.push(
+          card(
+            "Le message de guilde",
+            g.bulletin ?? "Bienvenue sous notre bannière.",
+          ),
+        );
         if (p.guildId === g.id)
           push(
             row(
@@ -1294,6 +1377,10 @@ export function buildView(result, owner) {
                 disabled: g.leaderId !== owner || g.level >= 10,
               }),
               btn("Quitter…", "confirm", ["guildLeave"], { style: 4 }),
+              nav("Notre cité", "city"),
+              btn("Message…", "form", ["guildBulletin"], {
+                disabled: g.leaderId !== owner && !g.officers?.includes(owner),
+              }),
             ),
           );
         else
@@ -1305,7 +1392,14 @@ export function buildView(result, owner) {
               }),
             ),
           );
-        push(row(nav("Autres guildes", "guilds")));
+        push(
+          row(
+            nav("Autres guildes", "guilds"),
+            ...(p.guildId === g.id
+              ? [nav("Membres & officiers", "guildRoster")]
+              : []),
+          ),
+        );
       }
       back("social", "← Aux compagnons");
       break;
@@ -1565,6 +1659,26 @@ export function buildView(result, owner) {
           "Engager le raid ?",
           "Le groupe partira immédiatement. Chaque participant engagera 20 énergie et son délai personnel de 24 heures. Le combat se résout collectivement, avec récompenses individuelles en cas de victoire.",
         ],
+        friendRemove: [
+          "Retirer cet ami ?",
+          "L’amitié sera retirée de vos deux listes. Tu pourras proposer une nouvelle demande plus tard.",
+        ],
+        blockPlayer: [
+          "Fermer ces portes ?",
+          "L’amitié et les demandes entre vous seront retirées. Les défis, invitations et cadeaux directs seront bloqués. Tu pourras débloquer ce joueur dans Social → Amis → Personnes bloquées.",
+        ],
+        guildKick: [
+          "Exclure ce compagnon ?",
+          "Le membre quittera la guilde et sa garde sera retirée. Ses dons restent au trésor commun.",
+        ],
+        cityWarToggle: [
+          "Changer l’engagement de votre cité ?",
+          "Activer les sièges permet aux autres cités volontaires de niveau proche de vous attaquer. Aucun coffre ne peut être pillé et aucun bâtiment n’est détruit. Après avoir attaqué, attendez six heures pour désactiver les sièges.",
+        ],
+        citySiege: [
+          "Engager votre armée ?",
+          "Le siège coûte 120 or du trésor et 15 énergie au commandant. Votre armée récupérera pendant six heures. La cité adverse aura six heures de protection ; les coffres et bâtiments restent protégés.",
+        ],
       };
       const [title, description] = descriptions[result.kind];
       screen.title = title;
@@ -1583,6 +1697,11 @@ export function buildView(result, owner) {
         guildLeave: "guildInfo",
         partyLeave: "partyInfo",
         raid: "partyInfo",
+        friendRemove: "friends",
+        blockPlayer: "friends",
+        guildKick: "guildRoster",
+        cityWarToggle: "city",
+        citySiege: "cityTargets",
       }[result.kind];
       push(
         row(

@@ -196,13 +196,13 @@ test("combat : un tour ne peut être rejoué, une compétence a un délai", asyn
   assert.ok(p.mana > 20);
 });
 
-test("trois victoires puis un gardien ouvrent la route et le retour sécurise le butin", async () => {
+test("deux victoires puis un gardien ouvrent la route et le retour sécurise le butin", async () => {
   const { game, store } = setup();
   await create(game);
   await game.execute("travel", "alice", { zoneId: 0 });
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     const encounter = await game.execute("explore", "alice");
-    assert.equal(encounter.p.battle.enemy.boss, i === 3);
+    assert.equal(encounter.p.battle.enemy.boss, i === 2);
     await edit(store, "alice", (p) => {
       p.battle.enemy.hp = 1;
     });

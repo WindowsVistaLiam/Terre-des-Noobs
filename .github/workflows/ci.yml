@@ -30,6 +30,10 @@ jobs:
         run: >-
           docker run --rm terre-des-noobs:ci node --input-type=module -e
           "import {render} from './src/views.js';
-          const panel = await render({type:'welcome'},'ci');
+          import {createSocialPreviewGame} from './scripts/preview.js';
+          import {resolveRoute} from './src/controller.js';
+          const game = await createSocialPreviewGame();
+          for (const action of ['profile','social','market','info']) {
+          const panel = await render(await resolveRoute(game,{action},'demo'),'demo');
           if (!panel.files[0].attachment.length) process.exit(1);
-          console.log('Production Canvas PNG:', panel.files[0].attachment.length, 'bytes');"
+          console.log(action, 'Canvas PNG:', panel.files[0].attachment.length, 'bytes'); }"

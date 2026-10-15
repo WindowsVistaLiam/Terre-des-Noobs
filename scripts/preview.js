@@ -72,14 +72,59 @@ export async function createPreviewGame() {
   return game;
 }
 
-async function main() {
+export async function createSocialPreviewGame() {
   const game = await createPreviewGame();
+  await game.store.transaction(async (tx) => {
+    const merchant = await tx.get("player", "merchant");
+    merchant.level = 12;
+    merchant.gold = 1000;
+    merchant.hp = statsOf(merchant).hp;
+    await tx.set("player", "merchant", merchant);
+  });
+  const { guild } = await game.execute("guildCreate", "demo", {
+    name: "Les Veilleurs de Vesper",
+  });
+  await game.execute("guildJoin", "merchant", { guildId: guild.id });
+  await game.execute("friendRequest", "demo", { targetId: "merchant" });
+  await game.execute("friendRespond", "merchant", {
+    requestId: "demo.merchant",
+    response: "accept",
+  });
+  await game.execute("duelChallenge", "merchant", { targetId: "demo" });
+  await game.execute("cityInfo", "demo");
+  await game.store.transaction(async (tx) => {
+    const g = await tx.get("guild", guild.id);
+    g.gold = 900;
+    g.bulletin = "La cité tient tant que nous veillons ensemble.";
+    g.city.buildings = { remparts: 2, caserne: 1, infirmerie: 1, phare: 1 };
+    g.city.prestige = 85;
+    g.city.integrity = 700;
+    g.city.resources = { bois: 80, pierre: 65, fer: 32, herbe: 20, essence: 9 };
+    g.city.guards = {
+      merchant: {
+        name: "Borin Cendrefer",
+        until: game.now() + 86400000,
+        power: 95,
+      },
+    };
+    await tx.set("guild", g.id, g);
+  });
+  return game;
+}
+
+async function main() {
+  const game = await createSocialPreviewGame();
   const destination = resolve(".local/previews");
   await mkdir(destination, { recursive: true });
   const routes = {
     profil: { action: "profile" },
     marche: { action: "market" },
     info: { action: "info" },
+    social: { action: "social" },
+    amis: { action: "friends" },
+    reception: { action: "inbox" },
+    cite: { action: "city" },
+    defense: { action: "cityDefensePlan" },
     races: { action: "codex", args: { category: "races", page: 1 } },
     classes: { action: "codex", args: { category: "classes", page: 1 } },
     refuge: { action: "base" },
@@ -110,7 +155,9 @@ async function main() {
       )
     ).files[0].attachment,
   );
-  console.log(`12 panneaux de démonstration générés dans ${destination}`);
+  console.log(
+    `${Object.keys(routes).length + 1} panneaux de démonstration générés dans ${destination}`,
+  );
 }
 if (
   process.argv[1] &&

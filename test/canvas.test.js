@@ -1,11 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadImage, createCanvas } from "@napi-rs/canvas";
-import { createPreviewGame } from "../scripts/preview.js";
+import {
+  createPreviewGame,
+  createSocialPreviewGame,
+} from "../scripts/preview.js";
 import { resolveRoute } from "../src/controller.js";
 import { buildView, render, codexEntries } from "../src/views.js";
 import { drawPanel, wrapText } from "../src/canvas.js";
 import { uiId } from "../src/commands.js";
+import { RACE_COLORS } from "../src/social-content.js";
 
 async function verifyImage(result, owner = "demo") {
   const { screen } = buildView(result, owner);
@@ -161,4 +165,62 @@ test("guildes nombreuses et noms très longs ne débordent pas des cartes", asyn
   const lines = wrapText(context, "A".repeat(100), 180);
   assert.ok(lines.length > 1);
   assert.ok(lines.every((line) => context.measureText(line).width <= 180));
+});
+
+test("les quatre espaces ont des décors distincts et le profil garde son fond initial", async () => {
+  const game = await createSocialPreviewGame();
+  const hashes = new Set();
+  for (const [action, background] of [
+    ["profile", "profile"],
+    ["social", "social"],
+    ["market", "market"],
+    ["info", "info"],
+  ]) {
+    const result = await resolveRoute(game, { action }, "demo");
+    assert.equal(buildView(result, "demo").screen.background, background);
+    const panel = await verifyImage(result);
+    hashes.add(panel.buffer.toString("base64").slice(-1000));
+  }
+  assert.equal(hashes.size, 4);
+});
+
+test("les pages de peuples colorent le texte et réutilisent une seule bibliothèque", () => {
+  const cards = codexEntries("races");
+  assert.equal(cards.length, 16);
+  assert.equal(new Set(cards.map((c) => c.textColor)).size, 16);
+  assert.deepEqual(
+    new Set(cards.map((c) => c.textColor)),
+    new Set(Object.values(RACE_COLORS)),
+  );
+  for (const card of cards) assert.match(card.textColor, /^#[0-9a-f]{6}$/i);
+});
+
+test("les amis, la réception, la cité et les sorties coopératives sont aussi de vrais PNG", async () => {
+  const game = await createSocialPreviewGame();
+  for (const action of [
+    "social",
+    "friends",
+    "inbox",
+    "directory",
+    "city",
+    "cityDefensePlan",
+    "guildRoster",
+    "pvpLeaderboard",
+  ])
+    await verifyImage(await resolveRoute(game, { action }, "demo"));
+  const mail = await game.execute("inboxInfo", "demo");
+  await verifyImage(
+    await resolveRoute(
+      game,
+      { action: "duel", args: { duelId: mail.challenges[0].id } },
+      "demo",
+    ),
+  );
+  await verifyImage(
+    await resolveRoute(
+      game,
+      { action: "cityPlan", args: { buildingId: "remparts" } },
+      "demo",
+    ),
+  );
 });

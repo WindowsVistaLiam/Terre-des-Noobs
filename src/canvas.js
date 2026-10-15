@@ -5,7 +5,15 @@ const asset = (name) =>
   fileURLToPath(new URL(`./assets/${name}`, import.meta.url));
 GlobalFonts.registerFromPath(asset("fonts/Cinzel-Regular.ttf"), "BrumeTitle");
 GlobalFonts.registerFromPath(asset("fonts/Lato-Regular.ttf"), "BrumeText");
-let backdrop;
+const backdrops = new Map();
+const BACKGROUNDS = {
+  profile: "brumeterre.png",
+  social: "social.png",
+  market: "market.png",
+  info: "info.png",
+};
+const colorOf = (value, fallback) =>
+  PALETTE[value] ?? (/^#[0-9a-f]{6}$/i.test(value ?? "") ? value : fallback);
 const WIDTH = 1280,
   PAD = 58,
   GAP = 20;
@@ -161,8 +169,9 @@ function seal(ctx, x, y, tone) {
 }
 
 export async function drawPanel(screen) {
-  backdrop ??= loadImage(asset("brumeterre.png"));
-  const image = await backdrop;
+  const file = BACKGROUNDS[screen.background] ?? BACKGROUNDS.profile;
+  if (!backdrops.has(file)) backdrops.set(file, loadImage(asset(file)));
+  const image = await backdrops.get(file);
   const measure = createCanvas(WIDTH, 100).getContext("2d");
   const tone = PALETTE[screen.tone] ?? PALETTE.gold;
   const cardWidth = (WIDTH - PAD * 2 - GAP) / 2;
@@ -309,18 +318,19 @@ export async function drawPanel(screen) {
     });
   }
   for (const card of cards) {
-    const accent = PALETTE[card.accent] ?? PALETTE.line;
+    const accent = colorOf(card.accent, PALETTE.line);
     box(ctx, card.x, card.y, card.width, card.height, accent);
     let y = card.y + 21;
     y += text(ctx, card.title, card.x + 21, y, {
       size: 21,
-      color: PALETTE.gold,
+      color: colorOf(card.titleColor, PALETTE.gold),
       title: true,
       width: card.width - 42,
     });
     y += 12;
     y += text(ctx, card.text, card.x + 21, y, {
       size: 23,
+      color: colorOf(card.textColor, PALETTE.paper),
       width: card.width - 42,
     });
     if (card.tag)

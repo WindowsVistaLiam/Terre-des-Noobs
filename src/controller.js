@@ -7,6 +7,22 @@ import {
   buildModal,
 } from "./commands.js";
 import { render } from "./views.js";
+import { normalizeCity, cityStats } from "./social-game.js";
+import { CITY_UPGRADES } from "./social-content.js";
+
+const socialRoutes = {
+  social: "socialInfo",
+  friends: "friendsInfo",
+  inbox: "inboxInfo",
+  directory: "directoryInfo",
+  playerCard: "playerCard",
+  duels: "duelsInfo",
+  duel: "duelInfo",
+  pvpLeaderboard: "pvpLeaderboard",
+  city: "cityInfo",
+  cityDefensePlan: "cityInfo",
+  cityTargets: "cityTargets",
+};
 
 const uiOnly = new Set([
   "info",
@@ -31,6 +47,12 @@ const uiOnly = new Set([
   "partyPreview",
   "raidPreview",
   "confirm",
+  "requestPreview",
+  "cityPlan",
+  "siegePreview",
+  "guildRoster",
+  "guildMember",
+  "blocked",
 ]);
 export async function resolveRoute(game, route, userId, requestId) {
   const action = route.action,
@@ -58,11 +80,96 @@ export async function resolveRoute(game, route, userId, requestId) {
       Number.isSafeInteger(args.page) && args.page >= 1 && args.page <= 10000,
       "Page invalide.",
     );
+  if (socialRoutes[action]) {
+    const result = await game.execute(socialRoutes[action], userId, args);
+    if (action === "cityDefensePlan") result.type = action;
+    return result;
+  }
 
   if (uiOnly.has(action)) {
     const { p } = await game.execute("profile", userId);
     const data = { p, type: action, ...args, now };
     switch (action) {
+      case "blocked": {
+        const result = await game.execute("friendsInfo", userId);
+        const pages = Math.max(1, Math.ceil(result.blocked.length / 6)),
+          page = Math.min(args.page ?? 1, pages);
+        return {
+          ...result,
+          type: "blocked",
+          entries: result.blocked.slice((page - 1) * 6, page * 6),
+          page,
+          pages,
+        };
+      }
+      case "requestPreview": {
+        ensure(["friend", "guild"].includes(args.kind), "Demande inconnue.");
+        const record = await game.store.transaction((tx) =>
+          tx.get(
+            args.kind === "friend" ? "friend_request" : "guild_invite",
+            args.key,
+          ),
+        );
+        ensure(
+          record && (record.to === userId || record.from === userId),
+          "Cette demande ne t’appartient pas.",
+        );
+        return { p, type: "request", kind: args.kind, record, now };
+      }
+      case "cityPlan": {
+        ensure(
+          CITY_UPGRADES[args.buildingId],
+          "Construction de cité inconnue.",
+        );
+        return {
+          ...(await game.execute("cityInfo", userId)),
+          type: "cityUpgrade",
+          buildingId: args.buildingId,
+        };
+      }
+      case "siegePreview": {
+        const own = await game.execute("cityInfo", userId);
+        const target = await game.store.transaction((tx) =>
+          tx.get("guild", args.guildId),
+        );
+        ensure(
+          target && target.id !== own.guild.id,
+          "Cité adverse introuvable.",
+        );
+        normalizeCity(target, now);
+        return {
+          ...own,
+          type: "siegePreview",
+          target: {
+            id: target.id,
+            name: target.name,
+            level: target.level,
+            city: target.city,
+            cityStats: cityStats(target),
+          },
+        };
+      }
+      case "guildRoster":
+      case "guildMember": {
+        const { guild, members } = await game.execute("guildInfo", userId);
+        ensure(guild, "Tu dois appartenir à une guilde.");
+        if (action === "guildMember") {
+          const member = members.find((m) => m.id === args.targetId);
+          ensure(member, "Ce membre a quitté la guilde.");
+          return { p, guild, member, type: action, now };
+        }
+        const pages = Math.max(1, Math.ceil(members.length / 6)),
+          page = Math.min(args.page ?? 1, pages);
+        return {
+          p,
+          guild,
+          entries: members.slice((page - 1) * 6, page * 6),
+          page,
+          pages,
+          type: action,
+          now,
+        };
+      }
       case "slot":
       case "building":
         ensure(
@@ -152,9 +259,18 @@ export async function resolveRoute(game, route, userId, requestId) {
         break;
       case "confirm":
         ensure(
-          ["demolish", "salvage", "guildLeave", "partyLeave", "raid"].includes(
-            args.kind,
-          ),
+          [
+            "demolish",
+            "salvage",
+            "guildLeave",
+            "partyLeave",
+            "raid",
+            "friendRemove",
+            "blockPlayer",
+            "guildKick",
+            "cityWarToggle",
+            "citySiege",
+          ].includes(args.kind),
           "Confirmation inconnue.",
         );
         if (args.kind === "salvage") {
@@ -186,6 +302,11 @@ export async function resolveRoute(game, route, userId, requestId) {
   if (action === "consume" && result.p.location === "base")
     result.type = "resources";
   if (action === "gift") result.type = "social";
+  if (result.type === "social")
+    return {
+      ...(await game.execute("socialInfo", userId)),
+      message: result.message,
+    };
   if (["sell", "buy", "cancelListing"].includes(action))
     return {
       ...(await game.execute("market", userId, { mine: action !== "buy" })),

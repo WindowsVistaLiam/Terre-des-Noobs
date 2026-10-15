@@ -711,6 +711,13 @@ export const RARITIES = [
   },
 ];
 export const RECIPES = {
+  protection: {
+    name: "Protection du voyageur (inhabituelle)",
+    cost: { fer: 4, cuir: 4, bois: 6 },
+    gold: 35,
+    slot: "armor",
+    rarity: 1,
+  },
   potion: {
     name: "Potion de soin ×3",
     cost: { herbe: 4 },
@@ -825,6 +832,7 @@ export const WORLD_EVENTS = [
   },
 ];
 export const HOUR = 3_600_000;
+export const VICTORIES_FOR_BOSS = 2;
 export const DAY = 24 * HOUR;
 export const MAX_LEVEL = 50;
 export const xpRequired = (level) => 70 + level * 45 + level * level * 5;
