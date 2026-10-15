@@ -12,3 +12,12 @@ export function errorMessage(error) {
   }
   return [...new Set(codes)].join(", ") || error?.name || "Erreur inconnue";
 }
+
+export function databaseStartupMessage(error, config) {
+  const hint = config.railway
+    ? "Sur Railway, vérifie que PostgreSQL est démarré dans le même projet et environnement, puis sélectionne sa variable DATABASE_URL avec Variables → Add Reference dans le service du bot. Garde DEMO_MODE=false."
+    : config.production
+      ? "Vérifie DATABASE_URL et la disponibilité du service PostgreSQL. Garde DEMO_MODE=false en production."
+      : "Pour un test local sans base de données, mets DEMO_MODE=true dans .env.";
+  return `Connexion PostgreSQL impossible : ${errorMessage(error)} ${hint}`;
+}

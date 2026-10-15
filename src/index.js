@@ -5,7 +5,7 @@ import { loadConfig } from "./config.js";
 import { registerCommands } from "./register.js";
 import { createInteractionHandler } from "./controller.js";
 import { createHealthServer } from "./health.js";
-import { errorMessage } from "./errors.js";
+import { errorMessage, databaseStartupMessage } from "./errors.js";
 
 let store, client, server, cleanupTimer;
 let stopping = false;
@@ -43,10 +43,7 @@ async function main() {
   try {
     await store.init();
   } catch (error) {
-    throw new Error(
-      `Connexion PostgreSQL impossible : ${errorMessage(error)} Pour un test local sans base de données, mets DEMO_MODE=true dans .env.`,
-      { cause: error },
-    );
+    throw new Error(databaseStartupMessage(error, config), { cause: error });
   }
   if (config.demo)
     console.warn("MODE DÉMO : les personnages seront perdus au redémarrage.");
