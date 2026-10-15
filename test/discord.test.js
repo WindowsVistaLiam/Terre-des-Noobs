@@ -47,13 +47,16 @@ export function validateComponents(components, owner) {
   }
 }
 
-test("quatre commandes sans arguments : profil, marché, info et social", () => {
+test("quatre commandes, avec une cible facultative pour consulter un profil", () => {
   assert.deepEqual(
     commands.map((c) => c.name),
     ["profil", "marché", "info", "social"],
   );
-  for (const command of commands) assert.ok(!command.options?.length);
-  assert.equal(routeCommand({ commandName: "marché" }).action, "market");
+  assert.equal(commands[0].options[0].name, "joueur");
+  assert.equal(commands[0].options[0].type, 6);
+  assert.equal(commands[0].options[0].required, false);
+  for (const command of commands.slice(1)) assert.ok(!command.options?.length);
+  assert.equal(routeCommand({ commandName: "marché" }).action, "publicMarket");
 });
 
 test("les boutons personnels contrôlent propriétaire, action autorisée et tour", () => {
@@ -203,7 +206,7 @@ const fixture = () => {
 test("parcours Discord complet : accueil, race, classe, formulaire et création sans autre slash", async () => {
   const { calls, mock, handler, game } = fixture();
   await handler(mock("command"));
-  assert.equal(calls.at(-1)[1].result.type, "welcome");
+  assert.equal(calls.at(-1)[1].result.type, "publicWelcome");
   await handler(
     mock("button", { customId: uiId("alice", "nav", "creationRace") }),
   );
@@ -230,7 +233,10 @@ test("parcours Discord complet : accueil, race, classe, formulaire et création 
       fields: { getTextInputValue: () => "Aelys" },
     }),
   );
-  assert.equal(calls.at(-1)[1].result.type, "profile");
+  assert.equal(
+    calls.filter(([kind]) => kind === "edit").at(-1)[1].result.type,
+    "profile",
+  );
   assert.equal((await game.execute("profile", "alice")).p.classId, "mage");
   assert.ok(calls.some(([kind]) => kind === "deferUpdate"));
 });

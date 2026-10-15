@@ -118,6 +118,8 @@ async function main() {
   await mkdir(destination, { recursive: true });
   const routes = {
     profil: { action: "profile" },
+    profil_public: { action: "publicProfile", args: { targetId: "demo" } },
+    marche_public: { action: "publicMarket" },
     marche: { action: "market" },
     info: { action: "info" },
     social: { action: "social" },
@@ -144,6 +146,17 @@ async function main() {
       payload.files[0].attachment,
     );
   }
+  const announcement = (
+    await resolveRoute(
+      game,
+      { action: "cityUpgrade", args: { buildingId: "caserne" } },
+      "demo",
+    )
+  ).activity;
+  await writeFile(
+    resolve(destination, "annonce.png"),
+    (await render(announcement, "demo")).files[0].attachment,
+  );
   await game.execute("travel", "demo", { zoneId: 2 });
   await game.execute("explore", "demo");
   await writeFile(
@@ -156,7 +169,7 @@ async function main() {
     ).files[0].attachment,
   );
   console.log(
-    `${Object.keys(routes).length + 1} panneaux de démonstration générés dans ${destination}`,
+    `${Object.keys(routes).length + 2} panneaux de démonstration générés dans ${destination}`,
   );
 }
 if (

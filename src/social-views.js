@@ -86,7 +86,7 @@ export function buildSocialView(result, owner, ui) {
         row(
           nav("Mes amis", "friends"),
           nav(`Réception (${incoming})`, "inbox"),
-          nav("Rencontrer des joueurs", "directory"),
+          nav("Voir les profils", "directory"),
         ),
       );
       push(
@@ -225,6 +225,7 @@ export function buildSocialView(result, owner, ui) {
             { style: result.blocked ? 2 : 4, disabled: t.id === owner },
           ),
           nav("Retour aux amis", "friends"),
+          btn("Profil complet", "viewProfile", [t.id]),
         ),
       );
       break;

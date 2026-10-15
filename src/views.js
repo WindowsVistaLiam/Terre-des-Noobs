@@ -16,9 +16,10 @@ import {
 } from "./content.js";
 import { statsOf, gearLabel } from "./game.js";
 import { drawPanel, plainText } from "./canvas.js";
-import { uiId } from "./commands.js";
+import { uiId, publicId } from "./commands.js";
 import { RACE_COLORS, SOCIAL_TYPES } from "./social-content.js";
 import { buildSocialView } from "./social-views.js";
+import { buildPublicView } from "./public-views.js";
 
 const slotName = { weapon: "Arme", armor: "Armure", charm: "Talisman" };
 const chapterNames = {
@@ -184,6 +185,10 @@ export function codexEntries(category, p) {
           "Profil : héros, aventure, refuge et talents.\nSocial : amis, duels, guildes et cité.\nMarché : équipement, échanges et artisanat.\nInfo : l’encyclopédie et ce guide.\nTout le reste se joue avec les menus.",
         ),
         card(
+          "La vie du salon",
+          "Profil, Marché et Info sont visibles par tous. Profil → joueur permet de consulter un autre héros. Les boutons ouvrent ton propre carnet privé. Social, coffres, formulaires et tours de combat restent personnels ; les grands résultats sont annoncés dans le salon.",
+        ),
+        card(
           "Prendre la route",
           "Deux victoires font apparaître le gardien. Chaque ennemi est résistant : prépare ton équipement et tes bâtiments. Fabrique la Protection du voyageur dès le départ. Le gardien ouvre la route suivante, sous réserve du niveau requis.",
         ),
@@ -274,7 +279,8 @@ export function buildView(result, owner) {
     ...(message ? { notice: message } : {}),
   };
   const components = [];
-  const id = (...args) => uiId(owner, ...args);
+  const id = (...args) =>
+    result.public ? publicId(...args) : uiId(owner, ...args);
   const btn = (
     label,
     action,
@@ -361,6 +367,8 @@ export function buildView(result, owner) {
     ];
   };
 
+  if (buildPublicView(result, { screen, card, row, push }))
+    return { screen, components };
   if (
     buildSocialView(result, owner, {
       screen,
@@ -523,6 +531,7 @@ export function buildView(result, owner) {
           nav("Contrats du jour", "quests"),
           act("Récupérer les provisions", "daily"),
           nav("Compagnons", "social"),
+          nav("Voir les profils", "directory"),
         ),
       );
       break;

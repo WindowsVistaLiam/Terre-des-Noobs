@@ -55,3 +55,9 @@ SIGINT et SIGTERM ferment le client Discord, le serveur et le pool PostgreSQL. L
 Les tests couvrent les 288 combinaisons d’identité et de menus de création, les invariants d’économie, annulations de transactions, progression et combats, récupération hors ligne, guildes, raids, déduplication, schémas Discord, propriétaire des composants, formulaires et parcours complets sans commande supplémentaire. Les rendus Canvas sont produits et décodés, avec vérification des dimensions, de la taille des fichiers, des textes longs et de l’absence de débordement des cartes. Le test PostgreSQL utilise deux pools concurrents, vérifie le rollback et recrée une connexion pour vérifier la persistance. GitHub Actions l’exécute contre PostgreSQL 17 puis construit et teste le rendu dans le conteneur de production.
 
 Le flux Discord est testé par des interactions simulées ; ces tests ne remplacent pas un essai sur serveur réel avec le token et les permissions effectives. Aucun secret n’est requis pour les tests de logique.
+
+## Panneaux publics et carnets privés
+
+Les commandes Profil, Marché et Info répondent publiquement ; Social reste éphémère. `public.js` construit des projections explicites sans sac, coffre ni relations privées. `public-views.js` utilise des contrôles `tdnp` limités à la lecture. Chaque clic partagé ouvre une nouvelle réponse éphémère liée au visiteur ; il ne met jamais à jour le message public. Les contrôles personnels `tdn` gardent leur vérification du propriétaire.
+
+Après une mutation réussie, le contrôleur peut publier une chronique Canvas compacte, reconstruite à partir d’une liste précise d’événements. Elle ne réutilise pas le texte privé du résultat. La déduplication des interactions supprime aussi les annonces répétées. Un échec d’envoi d’annonce ne relance pas une mutation déjà validée. Les notifications restent dans le salon d’origine, sans mention ni message privé automatique.

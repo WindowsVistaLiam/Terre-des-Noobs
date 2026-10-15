@@ -98,7 +98,7 @@ test("/social mène aux amis, à la demande puis à son acceptation sans autre c
   const g = await setup();
   let v = await follow(g, routeCommand({ commandName: "social" }));
   assert.equal(v.screen.background, "social");
-  v = await follow(g, click(v, "Rencontrer des joueurs"));
+  v = await follow(g, click(v, "Voir les profils"));
   v = await follow(g, choose(v, "player", B));
   v = await follow(g, click(v, "Demande d’amitié"));
   const mail = await g.execute("inboxInfo", B);

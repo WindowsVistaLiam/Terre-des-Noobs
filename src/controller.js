@@ -9,6 +9,7 @@ import {
 import { render } from "./views.js";
 import { normalizeCity, cityStats } from "./social-game.js";
 import { CITY_UPGRADES } from "./social-content.js";
+import { publicProfile, publicMarket, activityFor } from "./public.js";
 
 const socialRoutes = {
   social: "socialInfo",
@@ -58,6 +59,9 @@ export async function resolveRoute(game, route, userId, requestId) {
   const action = route.action,
     args = route.args ?? {};
   const now = game.now();
+  if (action === "publicProfile")
+    return publicProfile(game, args.targetId ?? userId);
+  if (action === "publicMarket") return publicMarket(game, args.page ?? 1);
   const saved = await game.store.transaction((tx) => tx.get("player", userId));
   if (action === "info" || action === "codex") {
     return { type: action, ...args, p: saved, now };
@@ -293,6 +297,8 @@ export async function resolveRoute(game, route, userId, requestId) {
   }
   const result = await game.execute(action, userId, args, { requestId });
   if (result.duplicate) return result;
+  const activity = activityFor(action, args, result, saved);
+  if (activity) result.activity = activity;
   if (action === "inventory") result.page = args.page ?? 1;
   if (action === "talent") result.type = "talents";
   if (["equip", "enchant", "unequip"].includes(action)) {
@@ -306,11 +312,13 @@ export async function resolveRoute(game, route, userId, requestId) {
     return {
       ...(await game.execute("socialInfo", userId)),
       message: result.message,
+      activity,
     };
   if (["sell", "buy", "cancelListing"].includes(action))
     return {
       ...(await game.execute("market", userId, { mine: action !== "buy" })),
       message: result.message,
+      activity,
     };
   return result;
 }
@@ -390,9 +398,18 @@ export function createInteractionHandler(
         for (const [uid, time] of cooldowns)
           if (time < now - 60000) cooldowns.delete(uid);
       // Un formulaire ouvert depuis un panneau met ce même panneau à jour.
-      const update = !isCommand && (!isModal || interaction.isFromMessage?.());
+      const publicSource =
+        interaction.customId?.startsWith("tdnp:") ||
+        interaction.message?.flags?.has(64) === false;
+      const update =
+        !isCommand &&
+        !publicSource &&
+        (!isModal || interaction.isFromMessage?.());
       if (update) await interaction.deferUpdate();
-      else await interaction.deferReply({ flags: 64 });
+      else
+        await interaction.deferReply({
+          flags: isCommand && route.public ? 0 : 64,
+        });
       const panelKey = update ? interaction.message?.id : undefined;
       const revision = panelKey
         ? (renders.get(panelKey)?.revision ?? 0) + 1
@@ -408,10 +425,24 @@ export function createInteractionHandler(
         interaction.id,
       );
       if (!result.duplicate) {
+        if (isCommand && route.public) result.public = true;
         const payload = await renderer(result, interaction.user.id);
         // Un PNG lent ne doit pas remplacer une destination choisie plus tard.
         if (!panelKey || renders.get(panelKey)?.revision === revision)
           await interaction.editReply(payload);
+        if (result.activity) {
+          try {
+            await interaction.followUp({
+              ...(await renderer(result.activity, interaction.user.id)),
+              flags: 0,
+            });
+          } catch (error) {
+            console.error("Annonce publique indisponible:", {
+              code: error.code,
+              name: error.name,
+            });
+          }
+        }
       }
     } catch (error) {
       const expected = error instanceof GameError;

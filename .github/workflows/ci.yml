@@ -33,7 +33,7 @@ jobs:
           import {createSocialPreviewGame} from './scripts/preview.js';
           import {resolveRoute} from './src/controller.js';
           const game = await createSocialPreviewGame();
-          for (const action of ['profile','social','market','info']) {
+          for (const action of ['profile','social','market','info','publicProfile','publicMarket']) {
           const panel = await render(await resolveRoute(game,{action},'demo'),'demo');
           if (!panel.files[0].attachment.length) process.exit(1);
           console.log(action, 'Canvas PNG:', panel.files[0].attachment.length, 'bytes'); }"

@@ -17,6 +17,12 @@ Les boutons du bas relient toujours les quatre espaces. Les listes permettent de
 
 Les panneaux, résultats, confirmations et erreurs sont des PNG générés localement par Canvas. Les boutons, listes et formulaires restent les contrôles natifs de Discord. Un menu remplace son image précédente : les pièces jointes ne s’accumulent pas. Les images incluent une description alternative.
 
+**Visibilité dans le salon :** `/profil`, `/marché` et `/info` sont publics. `/profil joueur:@ami` montre le héros d’un autre joueur, même si tu n’as pas encore de personnage. Le profil public présente les statistiques, l’équipement porté, la guilde et la progression. Les coffres, ressources et relations privées ne sont pas affichés. Les offres publiques du marché n’affichent aucun solde personnel.
+
+Les boutons d’un panneau public ouvrent une réponse privée pour la personne qui clique, sans remplacer le message partagé. **Mon carnet privé** permet de jouer depuis son profil. `/social`, les formulaires, les coffres et les tours de combat restent privés. Depuis **Voir les profils**, choisis un héros puis **Profil complet** pour consulter sa fiche.
+
+La création de héros, les départs, les résultats de combat, les constructions, la fabrication d’équipement, les mises en vente, les recrutements et améliorations de guilde, les duels terminés, les raids, les fortifications, les invasions repoussées et les sièges publient une courte chronique Canvas dans le salon où l’action a été faite. Les demandes d’amis, blocages, cadeaux, invitations non acceptées et tours ordinaires ne publient rien. Les annonces proposent un bouton pour voir le profil du héros. Aucune mention ne déclenche de notification.
+
 Le Profil conserve son panorama d’origine. Social utilise une salle de guilde, le Marché une rue marchande, et Info une bibliothèque. Les peuples du codex partagent cette bibliothèque avec une couleur de texte propre à chacun.
 
 ![Exemple du panneau de personnage](docs/images/profil.png)
@@ -38,7 +44,7 @@ Les « métiers » du codex décrivent les activités accessibles à tous : alch
 
 ## Jouer ensemble
 
-Dans **Social → Rencontrer des joueurs**, consulte un personnage pour demander son amitié, offrir un cadeau, proposer un duel ou l’inviter dans ta guilde si tu en as le droit. Le destinataire répond dans **Réception**. Les demandes d’amis et invitations durent sept jours ; un défi dure quinze minutes. Les listes d’amis sont limitées à 100, les demandes envoyées à 10 et les défis en attente à 3. Le blocage coupe les interactions directes dans les deux sens. Aucun message privé automatique n’est envoyé.
+Dans **Social → Voir les profils**, consulte un personnage pour demander son amitié, offrir un cadeau, proposer un duel ou l’inviter dans ta guilde si tu en as le droit. Le destinataire répond dans **Réception**. Les demandes d’amis et invitations durent sept jours ; un défi dure quinze minutes. Les listes d’amis sont limitées à 100, les demandes envoyées à 10 et les défis en attente à 3. Le blocage coupe les interactions directes dans les deux sens. Aucun message privé automatique n’est envoyé.
 
 Les **duels d’entraînement** nécessitent l’accord de l’adversaire et deux personnages au refuge. La simulation utilise vos équipements, à pleine vie et plein mana, en alternant le premier joueur. Après 40 tours sans vainqueur : égalité. Vos PV, mana, énergie, objets, or et XP réels ne changent pas ; seuls les résultats du classement sont enregistrés. Une minute de récupération sépare deux duels.
 
@@ -141,7 +147,7 @@ Si `REGISTER_COMMANDS=false`, exécuter `npm run register` pour forcer la mise �
 npm run dev       # Recharge le bot après changement de code
 npm run check     # Vérifie la syntaxe JavaScript
 npm test          # Jeu, menus, formulaires, images Canvas et disponibilité HTTP
-npm run preview   # Génère 17 vrais panneaux dans .local/previews, sans token
+npm run preview   # Génère 20 vrais panneaux dans .local/previews, sans token
 npm run register  # Réenregistre les quatre commandes Discord
 ```
 

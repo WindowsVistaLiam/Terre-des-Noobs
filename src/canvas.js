@@ -174,7 +174,8 @@ export async function drawPanel(screen) {
   const image = await backdrops.get(file);
   const measure = createCanvas(WIDTH, 100).getContext("2d");
   const tone = PALETTE[screen.tone] ?? PALETTE.gold;
-  const cardWidth = (WIDTH - PAD * 2 - GAP) / 2;
+  const columns = screen.compact ? 1 : 2;
+  const cardWidth = (WIDTH - PAD * 2 - GAP * (columns - 1)) / columns;
   font(measure, 22);
   let cursor = 170;
   const noticeLines = screen.notice
@@ -185,8 +186,8 @@ export async function drawPanel(screen) {
   const metricsY = cursor;
   if (screen.metrics?.length) cursor += 112;
   const cards = [];
-  for (let i = 0; i < (screen.cards ?? []).length; i += 2) {
-    const pair = screen.cards.slice(i, i + 2).map((card) => {
+  for (let i = 0; i < (screen.cards ?? []).length; i += columns) {
+    const pair = screen.cards.slice(i, i + columns).map((card) => {
       font(measure, 21, true);
       const titles = wrapText(measure, card.title, cardWidth - 42);
       font(measure, 23);
@@ -215,7 +216,7 @@ export async function drawPanel(screen) {
     );
     cursor += height + GAP;
   }
-  const height = Math.max(760, cursor + 90);
+  const height = Math.max(screen.compact ? 360 : 760, cursor + 90);
   const canvas = createCanvas(WIDTH, height),
     ctx = canvas.getContext("2d");
   const imageScale = Math.max(WIDTH / image.width, height / image.height);

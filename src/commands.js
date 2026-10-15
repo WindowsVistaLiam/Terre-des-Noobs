@@ -3,7 +3,12 @@ import { SlashCommandBuilder } from "discord.js";
 export const commands = [
   new SlashCommandBuilder()
     .setName("profil")
-    .setDescription("Ton héros, ton refuge, tes compagnons et tes aventures"),
+    .setDescription("Présenter ton héros ou consulter celui d’un autre joueur")
+    .addUserOption((option) =>
+      option
+        .setName("joueur")
+        .setDescription("Le joueur dont tu veux voir le héros"),
+    ),
   new SlashCommandBuilder()
     .setName("marché")
     .setDescription("Marché, coffre, ressources, équipement et artisanat"),
@@ -75,18 +80,53 @@ export const FORM_KINDS = new Set([
 
 export const uiId = (owner, action, ...args) =>
   ["tdn", owner, action, ...args].join(":");
+export const publicId = (action, ...args) =>
+  ["tdnp", action, ...args].join(":");
+// Les panneaux publics ne proposent que des lectures et des entrées privées.
+// Aucune mutation ne peut être encodée dans un bouton partagé.
+export function routePublicComponent(customId, values = []) {
+  if (typeof customId !== "string" || customId.length > 100) return null;
+  const [prefix, action, a, b] = customId.split(":");
+  if (prefix !== "tdnp") return null;
+  if (["publicProfile", "playerCard", "listing"].includes(action))
+    return {
+      action,
+      args: {
+        [action === "listing" ? "listingId" : "targetId"]: values[0] ?? a,
+      },
+    };
+  if (["profile", "market", "info", "social", "directory"].includes(action))
+    return { action, args: {} };
+  if (action === "nav" && ["profile", "market", "info", "social"].includes(a))
+    return { action: a, args: {} };
+  if (action === "chapter" && CATEGORIES.has(values[0]))
+    return { action: "codex", args: { category: values[0], page: 1 } };
+  if (action === "codex" && CATEGORIES.has(a))
+    return { action: "codex", args: { category: a, page: Number(b ?? 1) } };
+  if (action === "marketPage")
+    return { action: "publicMarket", args: { page: Number(a ?? 1) } };
+  return null;
+}
 export function parseId(customId, owner) {
   if (typeof customId !== "string" || customId.length > 100) return null;
   const [prefix, target, action, ...params] = customId.split(":");
   return prefix === "tdn" && target === owner ? { action, params } : null;
 }
 export function routeCommand(interaction) {
+  const targetId =
+    interaction.commandName === "profil"
+      ? (interaction.options?.getUser?.("joueur")?.id ?? interaction.user?.id)
+      : undefined;
   return {
     action:
-      { profil: "profile", marché: "market", info: "info", social: "social" }[
-        interaction.commandName
-      ] ?? "info",
-    args: {},
+      {
+        profil: "publicProfile",
+        marché: "publicMarket",
+        info: "info",
+        social: "social",
+      }[interaction.commandName] ?? "info",
+    args: targetId ? { targetId } : {},
+    public: interaction.commandName !== "social",
   };
 }
 const doActions = {
@@ -132,6 +172,8 @@ const doActions = {
   citySiege: (a) => ({ guildId: a }),
 };
 export function routeComponent(customId, owner, values = []) {
+  if (customId?.startsWith("tdnp:"))
+    return routePublicComponent(customId, values);
   const parsed = parseId(customId, owner);
   if (!parsed) return null;
   const {
@@ -200,6 +242,8 @@ export function routeComponent(customId, owner, values = []) {
       return { action: "giftOptions", args: { targetId: a } };
     case "player":
       return { action: "playerCard", args: { targetId: selected ?? a } };
+    case "viewProfile":
+      return { action: "publicProfile", args: { targetId: a } };
     case "guildMember":
       return { action: "guildMember", args: { targetId: selected ?? a } };
     case "duelEntry":
