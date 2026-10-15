@@ -70,6 +70,8 @@ Les ennemis demandent désormais plusieurs tours et frappent plus fort. Les gain
 
 Avant le premier départ, fabrique la **Protection du voyageur** à l’atelier : 35 or, 4 fers, 4 cuirs et 6 bois. Construis une caserne pour la mêlée ou une tour des arcanes pour la magie ; les remparts aident à encaisser. En combat, protège-toi contre les frappes lourdes, surveille le mana et prévois des potions. Une élite ou un gardien peut nécessiter un repli et davantage d’améliorations.
 
+Les soins et vols de vie sont appliqués **avant la riposte**, avec un plafond égal aux PV maximaux. Le journal affiche le soin effectivement reçu, le plafond éventuel, les dégâts de la riposte et les PV avant/après le tour. Exemple : **46 PV soignés puis 21 dégâts donnent +25 PV nets** sur la jauge. Le drain magique rend 45 % des dégâts et le drain physique 35 %, avant bonus de soins, en campagne comme en duel. Le dernier journal reste visible lorsqu’on rouvre un combat en cours.
+
 ## Tester dans Visual Studio Code
 
 Node.js **22.12+**, 24 recommandé. Dans **Terminal → Nouveau terminal**, à la racine du projet :

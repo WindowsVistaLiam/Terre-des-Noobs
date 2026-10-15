@@ -194,7 +194,7 @@ export function codexEntries(category, p) {
         ),
         card(
           "Combattre",
-          "Attaque : récupère 3 mana.\nDéfense : bloque 70 % des dégâts et rend 10 mana.\nCompétence : disponible un tour sur deux.\nPotion ou éther : consomme ton tour.\nUne frappe lourde arrive tous les trois tours.",
+          "Attaque : récupère 3 mana.\nDéfense : bloque 70 % des dégâts et rend 10 mana.\nCompétence : disponible un tour sur deux.\nPotion ou éther : consomme ton tour.\nUne frappe lourde arrive tous les trois tours.\nLes soins arrivent avant la riposte et sont limités aux PV manquants ; le journal détaille le bilan du tour.",
         ),
         card(
           "Sauver ton butin",
@@ -563,6 +563,7 @@ export function buildView(result, owner) {
       screen.tone = b ? "red" : "green";
       if (b) {
         const e = b.enemy;
+        if (!message && b.log?.length) screen.notice = b.log.join("\n");
         screen.title = e.name;
         screen.subtitle = `Tour ${b.turn} · niveau ${e.level}${e.boss ? " · Gardien de région" : e.elite ? " · Élite" : ""}`;
         screen.cards = [

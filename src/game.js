@@ -1,5 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { socialMethods, normalizeSocial } from "./social-game.js";
+import { DRAIN_RATES, drainHealing, hpChangeText } from "./combat-math.js";
 import {
   RACES,
   CLASSES,
@@ -455,6 +456,15 @@ export class Game {
     const s = statsOf(p);
     const e = b.enemy;
     const log = [];
+    const hpBefore = p.hp;
+    const heal = (amount, source, detail = "") => {
+      const before = p.hp;
+      p.hp = Math.min(s.hp, p.hp + amount);
+      const received = p.hp - before;
+      log.push(
+        `${source} : +${received} PV${received < amount ? ` sur ${amount} possibles (limite ${s.hp} PV)` : ""}${detail ? ` · ${detail}` : ""}.`,
+      );
+    };
     let guarding = false;
     if (move === "flee") {
       // Repli garanti et coûteux : pas de blocage de personnage dans un combat.
@@ -476,8 +486,7 @@ export class Game {
         const value = Math.round(
           s.hp * 0.4 * (1 + s.healing + (worldEvent(now).healing ?? 0)),
         );
-        p.hp = Math.min(s.hp, p.hp + value);
-        log.push(`🧪 Tu récupères jusqu’à ${value} PV.`);
+        heal(value, "Potion de soin");
       } else {
         p.mana = Math.min(s.mana, p.mana + Math.ceil(s.mana * 0.5));
         log.push("💧 Ton mana se régénère.");
@@ -513,10 +522,7 @@ export class Game {
         if (sk.kind === "rage")
           p.hp = Math.max(1, p.hp - Math.ceil(s.hp * 0.08));
         if (sk.kind === "heal") {
-          p.hp = Math.min(
-            s.hp,
-            p.hp + Math.round(s.power * multiplier * (1 + s.healing)),
-          );
+          heal(Math.round(s.power * multiplier * (1 + s.healing)), sk.name);
           guarding = true;
           multiplier = 0;
         }
@@ -534,20 +540,19 @@ export class Game {
         );
         if (move === "skill") {
           const kind = CLASSES[p.classId].skill.kind;
-          if (kind.startsWith("drain"))
-            p.hp = Math.min(
-              s.hp,
-              p.hp +
-                Math.ceil(
-                  damage *
-                    (kind === "drain_magic" ? 0.45 : 0.35) *
-                    (1 + s.healing),
-                ),
+          if (DRAIN_RATES[kind])
+            heal(
+              drainHealing(kind, damage, s.healing),
+              "Vol de vie",
+              `${DRAIN_RATES[kind] * 100} % de ${damage} dégâts${s.healing ? `, bonus de soins +${Math.round(s.healing * 100)} %` : ""}`,
             );
         }
       }
     }
-    if (e.hp <= 0) return this.victory(tx, p, now, log);
+    if (e.hp <= 0) {
+      log.push("Ennemi vaincu : aucune riposte.");
+      return this.victory(tx, p, now, log, hpBefore);
+    }
     const heavy = b.turn % 3 === 0;
     const enrage = b.turn > 20 ? 1 + (b.turn - 20) * 0.2 : 1;
     const phase = e.boss && e.hp < e.maxHp * 0.4 ? 1.2 : 1;
@@ -562,6 +567,7 @@ export class Game {
     log.push(
       `${heavy ? "💢 Frappe lourde" : "🩸 Riposte"} : ${damage} dégâts.`,
     );
+    log.push(hpChangeText(hpBefore, p.hp, s.hp));
     b.turn++;
     b.log = log;
     if (p.hp <= 0 || b.turn > 60) {
@@ -581,13 +587,13 @@ export class Game {
       return {
         p,
         type: "profile",
-        message: `${log.join("\n")}\n☠️ Les éclaireurs te ramènent à la base. La moitié de l’or et des ressources du sac est sauvée, les équipements du sac sont perdus. Ton coffre est intact.`,
+        message: `${log.join("\n")}\n☠️ Les éclaireurs te ramènent à la base. La moitié de l’or et des ressources du sac est sauvée, les équipements du sac sont perdus. Ton coffre est intact.\nPV au refuge après secours : ${p.hp} / ${s.hp}.`,
       };
     }
     await this.save(tx, p);
     return { p, type: "campaign", message: log.join("\n") };
   }
-  async victory(tx, p, now, log) {
+  async victory(tx, p, now, log, hpBefore = p.hp) {
     const e = p.battle.enemy;
     const s = statsOf(p);
     const event = worldEvent(now);
@@ -634,6 +640,7 @@ export class Game {
     log.push(
       `🏆 Victoire ! +${xp} XP, ${gold} or et des ressources dans ton sac.${levels ? ` Niveau ${p.level} ! +${levels} point(s) de talent.` : ""}`,
     );
+    log.push(hpChangeText(hpBefore, p.hp, statsOf(p).hp));
     await this.save(tx, p);
     return { p, type: "campaign", message: log.join("\n") };
   }

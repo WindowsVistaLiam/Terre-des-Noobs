@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ensure, statsOf } from "./game.js";
 import { CLASSES, DAY, HOUR, dayKey } from "./content.js";
+import { drainHealing } from "./combat-math.js";
 import {
   CITY_UPGRADES,
   cityUpgradeCost,
@@ -486,7 +487,7 @@ export const socialMethods = {
           const before = f.hp;
           f.hp = Math.min(
             f.s.hp,
-            f.hp + Math.ceil(dealt * 0.35 * (1 + f.s.healing)),
+            f.hp + drainHealing(sk.kind, dealt, f.s.healing),
           );
           f.healed += f.hp - before;
         }
