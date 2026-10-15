@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import { registerCommands } from "./register.js";
 import { createInteractionHandler } from "./controller.js";
 import { createHealthServer } from "./health.js";
+import { errorMessage } from "./errors.js";
 
 let store, client, server, cleanupTimer;
 let stopping = false;
@@ -30,7 +31,7 @@ process.once("SIGTERM", () => {
   void shutdown();
 });
 process.on("unhandledRejection", (error) => {
-  console.error("Erreur asynchrone:", error?.message ?? "inconnue");
+  console.error("Erreur asynchrone:", errorMessage(error));
   void shutdown(1);
 });
 
@@ -39,7 +40,14 @@ async function main() {
   store = config.demo
     ? new MemoryStore()
     : new PostgresStore(config.databaseUrl);
-  await store.init();
+  try {
+    await store.init();
+  } catch (error) {
+    throw new Error(
+      `Connexion PostgreSQL impossible : ${errorMessage(error)} Pour un test local sans base de données, mets DEMO_MODE=true dans .env.`,
+      { cause: error },
+    );
+  }
   if (config.demo)
     console.warn("MODE DÉMO : les personnages seront perdus au redémarrage.");
   client = new Client({
@@ -84,6 +92,6 @@ async function main() {
   await client.login(config.token);
 }
 main().catch((error) => {
-  console.error("Démarrage impossible:", error.message);
+  console.error("Démarrage impossible:", errorMessage(error));
   void shutdown(1);
 });
