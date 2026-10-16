@@ -84,6 +84,11 @@ test(
         title: "Gardien de Vesper",
         bio: "Une histoire sauvegardée dans PostgreSQL.",
       });
+      await ga.execute("travel", "seller", { zoneId: 0 });
+      await ga.execute("explore", "seller", {
+        mode: "farm", zoneId: 0, enemyIndex: 2, elite: true, boss: false,
+      }, { requestId: "saved-hunt" });
+      const savedBattle = (await gb.execute("profile", "seller")).p.battle;
       await a.close();
       a = new PostgresStore(url, options);
       await a.init();
@@ -108,6 +113,15 @@ test(
       assert.equal(publicHero.target.title, "Gardien de Vesper");
       assert.equal(publicHero.appearance.portrait.hash, portrait.hash);
       assert.equal(publicHero.appearance.portrait.data, portrait.data);
+      const restored = new Game(a);
+      const hunter = (await restored.execute("profile", "seller")).p;
+      assert.deepEqual(hunter.battle, savedBattle);
+      assert.equal(hunter.battle.mode, "farm");
+      assert.deepEqual(hunter.hunt, { zoneId: 0, enemyIndex: 2, elite: true });
+      assert.equal((await restored.execute("explore", "seller", {}, { requestId: "saved-hunt" })).duplicate, true);
+      assert.equal((await restored.execute("profile", "seller")).p.energy, 95);
+      const map = await restored.execute("campaignMap", "one");
+      assert.ok(map.travelers.find((v) => v.id === "seller").inBattle);
     } finally {
       if (a) await a.close();
       if (b) await b.close();

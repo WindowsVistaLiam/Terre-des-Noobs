@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { socialMethods, normalizeSocial } from "./social-game.js";
 import { DRAIN_RATES, drainHealing, hpChangeText } from "./combat-math.js";
+import { campaignEnemy, campaignMarker, guardianReady } from "./campaign.js";
 import {
   RACES,
   CLASSES,
@@ -94,6 +95,8 @@ export class Game {
       "inventory",
       "travel",
       "explore",
+      "encountersInfo",
+      "campaignMap",
       "combat",
       "returnHome",
       "rest",
@@ -440,17 +443,35 @@ export class Game {
       p.level >= ZONES[zoneId].level,
       `Niveau ${ZONES[zoneId].level} requis pour cette région.`,
     );
-    ensure(
-      p.location === "base" || p.zone === zoneId,
-      "Sécurise ton butin à la base avant de changer de région.",
-    );
     p.zone = zoneId;
+    p.hunt = null;
     p.location = "campaign";
     p.recoveryAt = now;
     await this.save(tx, p);
     return { p, message: ZONES[zoneId].story, type: "campaign" };
   }
-  async explore(tx, id, _, now) {
+  async encountersInfo(tx, id, _, now) {
+    const p = await this.player(tx, id, now);
+    this.noBattle(p);
+    ensure(p.location === "campaign", "Prends la route depuis la carte.");
+    return { p, type: "encounters" };
+  }
+  async campaignMap(tx, id, { page = 1 }, now) {
+    ensure(integer(page, 1, 10000), "Page invalide.");
+    const p = await this.player(tx, id, now);
+    const players = (await tx.list("player"))
+      .filter((v) => v.id !== id && !p.social.blocked.includes(v.id) &&
+        !v.social?.blocked?.includes(id))
+      .sort((a, b) => (b.unlockedZone ?? 0) - (a.unlockedZone ?? 0) ||
+        a.name.localeCompare(b.name, "fr") || a.id.localeCompare(b.id));
+    const pages = Math.max(1, Math.ceil(players.length / 5));
+    page = Math.min(page, pages);
+    return {
+      p, type: "map", page, pages,
+      travelers: [p, ...players.slice((page - 1) * 5, page * 5)].map(campaignMarker),
+    };
+  }
+  async explore(tx, id, args = {}, now) {
     const p = await this.player(tx, id, now);
     this.noBattle(p);
     ensure(
@@ -466,11 +487,23 @@ export class Game {
       p.gear.length + p.bag.gear.length < 100,
       "Ton coffre est plein (100 équipements). Recycle ou vends du matériel.",
     );
-    p.energy -= 5;
     const zone = ZONES[p.zone];
+    const chosen = args.mode !== undefined;
+    if (chosen) {
+      ensure(["progress", "farm"].includes(args.mode), "Mode de rencontre inconnu.");
+      ensure(args.zoneId === p.zone, "Tu as changé de région. Rouvre le choix des ennemis.");
+      ensure(typeof args.boss === "boolean" && typeof args.elite === "boolean",
+        "Type d’ennemi invalide.");
+      ensure(integer(args.enemyIndex, 0, zone.enemies.length - 1), "Ennemi inconnu.");
+      ensure(!args.boss || (args.mode === "progress" && !args.elite),
+        "Le gardien ne peut pas être chassé en mode récolte.");
+      ensure(!args.boss || guardianReady(p),
+        `Remporte ${VICTORIES_FOR_BOSS} combats de progression avant de défier le gardien.`);
+    }
+    p.energy -= 5;
     const roll = this.random();
-    const boss = (p.zoneWins[p.zone] ?? 0) >= VICTORIES_FOR_BOSS;
-    if (!boss && roll < 0.12) {
+    const boss = chosen ? args.boss : guardianReady(p);
+    if (!chosen && !boss && roll < 0.12) {
       const qty = 3 + Math.floor(this.random() * 4);
       add(p.bag.resources, { [zone.resource]: qty, pierre: 2 });
       p.bag.gold += 10 + zone.level * 3;
@@ -482,27 +515,17 @@ export class Game {
         message: `Tu découvres une cache oubliée : ${qty} ${RESOURCES[zone.resource]}, 2 pierres et quelques pièces. Le butin reste dans ton sac d’expédition.`,
       };
     }
-    const elite = !boss && roll > 0.88;
-    const level = zone.level + (boss ? 2 : elite ? 1 : 0);
-    const scale = boss ? 2.2 : elite ? 1.5 : 1;
-    const hp = Math.round((82 + level * 28) * scale);
+    const elite = chosen ? args.elite : !boss && roll > 0.88;
+    const enemyIndex = chosen ? args.enemyIndex : Math.floor(this.random() * zone.enemies.length);
+    const mode = chosen ? args.mode : "progress";
+    p.hunt = mode === "farm" ? { zoneId: p.zone, enemyIndex, elite } : null;
     p.battle = {
       id: shortId(),
       turn: 1,
       skillReady: 1,
       log: [],
-      enemy: {
-        name: boss
-          ? zone.boss
-          : `${elite ? "Élite · " : ""}${this.pick(zone.enemies)}`,
-        level,
-        boss,
-        elite,
-        hp,
-        maxHp: hp,
-        attack: Math.round((11 + level * 3) * (boss ? 1.25 : elite ? 1.12 : 1)),
-        defense: 3 + level * 1.5,
-      },
+      mode,
+      enemy: campaignEnemy(zone, enemyIndex, { boss, elite }),
     };
     await this.save(tx, p);
     return {
@@ -510,7 +533,8 @@ export class Game {
       type: "campaign",
       message: boss
         ? "Le gardien de la région te barre la route !"
-        : "Une silhouette émerge de la Brume…",
+        : mode === "farm" ? "Chasse aux ressources : ce combat ne fait pas avancer le gardien."
+          : "Une silhouette émerge de la Brume…",
     };
   }
   hit(attack, defense, multiplier = 1) {
@@ -552,12 +576,12 @@ export class Game {
       const lost = Math.ceil(p.bag.gold * 0.25);
       p.bag.gold -= lost;
       p.battle = null;
-      p.zoneWins[p.zone] = 0;
+      if (b.mode !== "farm") p.zoneWins[p.zone] = 0;
       await this.save(tx, p);
       return {
         p,
         type: "campaign",
-        message: `Tu échappes au combat. Tu perds ${lost} or du sac ; la progression vers le boss est remise à zéro.`,
+        message: `Tu échappes au combat. Tu perds ${lost} or du sac ; ${b.mode === "farm" ? "la progression du gardien est conservée" : "la progression vers le boss est remise à zéro"}.`,
       };
     }
     if (move === "potion" || move === "ether") {
@@ -659,7 +683,7 @@ export class Game {
       p.bag = emptyBag();
       p.battle = null;
       p.location = "base";
-      p.zoneWins[p.zone] = 0;
+      if (b.mode !== "farm") p.zoneWins[p.zone] = 0;
       p.hp = Math.max(1, Math.ceil(s.hp * 0.2));
       p.mana = Math.ceil(s.mana * 0.2);
       p.recoveryAt = now;
@@ -676,6 +700,7 @@ export class Game {
   }
   async victory(tx, p, now, log, hpBefore = p.hp) {
     const e = p.battle.enemy;
+    const farming = p.battle.mode === "farm";
     const s = statsOf(p);
     const event = worldEvent(now);
     const factor = e.boss ? 3 : e.elite ? 1.6 : 1;
@@ -703,7 +728,8 @@ export class Game {
     }
     p.kills++;
     p.quests.kills++;
-    p.zoneWins[p.zone] = (p.zoneWins[p.zone] ?? 0) + 1;
+    if (!farming)
+      p.zoneWins[p.zone] = Math.min(VICTORIES_FOR_BOSS, (p.zoneWins[p.zone] ?? 0) + 1);
     if (e.boss) {
       p.zoneWins[p.zone] = 0;
       if (!p.bosses.includes(p.zone)) {
@@ -718,6 +744,8 @@ export class Game {
     }
     const levels = this.gainXp(p, xp);
     p.battle = null;
+    if (farming) log.push("Chasse terminée : progression du gardien conservée. Tu peux chasser ce même ennemi à nouveau.");
+    else if (!e.boss && guardianReady(p)) log.push("Le gardien est disponible. Défie-le quand tu veux, ou continue à chasser.");
     log.push(
       `🏆 Victoire ! +${xp} XP, ${gold} or et des ressources dans ton sac.${levels ? ` Niveau ${p.level} ! +${levels} point(s) de talent.` : ""}`,
     );

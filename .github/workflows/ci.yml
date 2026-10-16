@@ -42,3 +42,14 @@ jobs:
           const battle = await render(await resolveRoute(game,{action:'campaign'},'demo'),'demo');
           if (!battle.files[0].attachment.length) process.exit(1);
           console.log('Enemy portrait PNG:', battle.files[0].attachment.length, 'bytes');"
+      - name: Verify campaign map and encounter menus in production image
+        run: >-
+          docker run --rm terre-des-noobs:ci node --input-type=module -e
+          "import {render} from './src/views.js';
+          import {createCampaignPreviewGame} from './scripts/preview.js';
+          import {resolveRoute} from './src/controller.js';
+          const game = await createCampaignPreviewGame();
+          for (const action of ['map','encounters']) {
+          const panel = await render(await resolveRoute(game,{action},'demo'),'demo');
+          if (!panel.files[0].attachment.length) process.exit(1);
+          console.log(action, 'Canvas PNG:', panel.files[0].attachment.length, 'bytes'); }"

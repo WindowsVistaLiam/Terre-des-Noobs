@@ -156,7 +156,7 @@ test("production hors ligne plafonnée à 12 h et conservation des fractions", a
   assert.equal(p.resources.bois, before + 49);
 });
 
-test("pas d’accès aux zones verrouillées et pas de changement de zone en expédition", async () => {
+test("pas d’accès aux zones verrouillées ni de retour au refuge pendant un combat", async () => {
   const { game } = setup();
   await create(game);
   await assert.rejects(

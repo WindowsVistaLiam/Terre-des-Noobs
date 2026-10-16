@@ -153,6 +153,27 @@ export async function createCustomizedPreviewGame() {
   return game;
 }
 
+export async function createCampaignPreviewGame() {
+  const game = await createPreviewGame();
+  for (const [id, name, stage] of [
+    ["scout", "Lyra des Ronces", 2],
+    ["smith", "Thorgar Brisefer", 1],
+    ["witch", "Selyra Noctefleur", 5],
+    ["king", "Mordecai le Veilleur", 11],
+  ]) {
+    await game.execute("create", id, { name, raceId: "humain", classId: "guerrier" });
+    await game.store.transaction(async (tx) => {
+      const p = await tx.get("player", id);
+      p.unlockedZone = stage;
+      p.level = Math.max(3, stage * 3 + 2);
+      p.bosses = Array.from({ length: stage }, (_, i) => i);
+      await tx.set("player", id, p);
+    });
+  }
+  await game.execute("travel", "demo", { zoneId: 2 });
+  return game;
+}
+
 async function main() {
   const game = await createSocialPreviewGame();
   const destination = resolve(".local/previews");
@@ -235,8 +256,13 @@ async function main() {
       )
     ).files[0].attachment,
   );
+  const campaign = await createCampaignPreviewGame();
+  for (const [name, action] of [["carte-campagne", "map"], ["choix-ennemis", "encounters"]]) {
+    await writeFile(resolve(destination, `${name}.png`),
+      (await render(await resolveRoute(campaign, { action }, "demo"), "demo")).files[0].attachment);
+  }
   console.log(
-    `${Object.keys(routes).length + 6} panneaux de démonstration générés dans ${destination}`,
+    `${Object.keys(routes).length + 8} panneaux de démonstration générés dans ${destination}`,
   );
 }
 if (

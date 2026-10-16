@@ -78,8 +78,8 @@ Utiliser un consommable prend ton tour.
 
 ### Le sac est exposé. Le coffre est protégé.
 
-Deux victoires font apparaître le gardien. Prépare-toi avant de le défier.
-Rentrer sécurise tout ton sac. Une défaite fait perdre la moitié de son or et de ses matériaux, ainsi que tous ses équipements. Fuir coûte 25 % de l’or du sac et remet le compteur du gardien à zéro.
+Choisis ton ennemi : avancer débloque le gardien après deux victoires ; chasser donne du butin sans avancer. Tu décides quand défier le gardien.
+Rentrer sécurise le sac. Défaite : moitié de l’or et des matériaux perdue, tous les équipements perdus. Fuir coûte 25 % de l’or. En progression, fuite et défaite remettent le compteur du gardien à zéro ; en chasse, il est conservé.
 
 ![Fiche 3](03-combattre-et-rentrer.png)
 

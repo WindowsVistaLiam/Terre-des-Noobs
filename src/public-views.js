@@ -69,6 +69,7 @@ export function buildPublicView(result, ui) {
           button("Rencontrer ce héros", "playerCard", t.id),
           button("Voir les autres profils", "directory"),
           button("Actualiser ce profil", "publicProfile", t.id),
+          button("Carte de la campagne", "map"),
         ),
       );
       if (t.bio) screen.cards.push(card("Son histoire", t.bio));

@@ -18,6 +18,12 @@ Les carnets personnels sont privés ; les commandes Profil, Marché et Info mont
 
 ## Persistance
 
+La campagne propose des rencontres choisies via `explore` avec le mode `progress` ou `farm`, l’index de l’ennemi, sa variante et la région attendue. Le serveur revalide ces paramètres avant de dépenser l’énergie. Les combats choisis n’ont ni cache ni substitution aléatoire ; le niveau reste celui de la région. `battle.mode` et `player.hunt` conservent le mode en cours et la dernière chasse dans le document du personnage. L’absence de `battle.mode` dans une sauvegarde ancienne conserve les règles de progression. Les anciens boutons Continuer ouvrent désormais le sélecteur. Aucun changement de schéma ni variable Railway n’est nécessaire.
+
+Seules les victoires de progression augmentent `zoneWins`, plafonné à deux. Atteindre ce seuil ajoute le gardien aux choix sans imposer un combat. Le mode chasse conserve ce compteur, y compris lors d’un repli ; les règles économiques de victoire et de perte du sac sont inchangées. Voyager entre régions accessibles est possible hors combat sans sécuriser le sac. Le compteur et les gardiens restent propres à chaque région.
+
+`campaignMap` produit une projection publique explicite des aventuriers, exclut les blocages dans les deux sens et pagine cinq autres héros autour du joueur. Le repère utilise `unlockedZone` (étape maximale), avec la région actuelle séparée pour montrer les retours en chasse. Le Canvas dessine douze étapes reliées, leurs verrous et six repères numérotés au maximum ; aucun téléchargement d’image ni service externe ne sert au dessin.
+
 La table `rpg_documents` possède une clé primaire `(kind, id)`, un document JSONB et un horodatage. Les personnages ont `schemaVersion: 1`. L’initialisation crée la table et l’index nécessaires avec `IF NOT EXISTS`, sans suppression ou réécriture des sauvegardes. Une évolution incompatible devra ajouter une migration explicite ; ne pas simplement changer la version.
 
 Un compte Discord possède un personnage partagé sur tous les serveurs où cette instance du bot est présente. Le marché, les guildes et les groupes sont également globaux à cette base. Deux installations utilisant des bases différentes forment deux mondes distincts.

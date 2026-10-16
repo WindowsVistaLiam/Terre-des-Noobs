@@ -21,6 +21,7 @@ import { RACE_COLORS, SOCIAL_TYPES } from "./social-content.js";
 import { buildSocialView } from "./social-views.js";
 import { buildPublicView } from "./public-views.js";
 import { DEFAULT_PORTRAIT, enemyPortrait } from "./portraits.js";
+import { campaignEnemy, campaignMarker, guardianReady } from "./campaign.js";
 
 const slotName = { weapon: "Arme", armor: "Armure", charm: "Talisman" };
 const chapterNames = {
@@ -191,7 +192,7 @@ export function codexEntries(category, p) {
         ),
         card(
           "Prendre la route",
-          "Deux victoires font apparaître le gardien. Chaque ennemi est résistant : prépare ton équipement et tes bâtiments. Fabrique la Protection du voyageur dès le départ. Le gardien ouvre la route suivante, sous réserve du niveau requis.",
+          "Aventure → Choisir un ennemi : avance en campagne ou chasse pour les ressources. Deux victoires de progression débloquent le gardien ; tu décides quand le défier. La chasse conserve ce compteur et donne XP, or et butin, sans ouvrir de route. Les ennemis des anciennes régions gardent leur faible niveau. Le gardien ouvre la route suivante, sous réserve du niveau requis.",
         ),
         card(
           "Combattre",
@@ -199,7 +200,7 @@ export function codexEntries(category, p) {
         ),
         card(
           "Sauver ton butin",
-          "Rentrer sécurise tout le sac. Une défaite perd la moitié de l’or et des matériaux du sac, et tous ses équipements. Le coffre est protégé. Fuir coûte 25 % de l’or du sac et remet le compteur du gardien à zéro.",
+          "Rentrer sécurise tout le sac. Une défaite perd la moitié de l’or et des matériaux du sac, et tous ses équipements. Le coffre est protégé. Fuir coûte 25 % de l’or du sac. En progression, fuite et défaite remettent le compteur du gardien à zéro ; en chasse, ce compteur est conservé.",
         ),
         card(
           "Ton refuge",
@@ -600,16 +601,24 @@ export function buildView(result, owner) {
         screen.cards.push(card("Ton histoire", p.customization.bio));
       break;
     }
-    case "map":
+    case "map": {
       screen.title = "Les routes de Brumeterre";
-      screen.subtitle = "Choisis ta prochaine destination.";
-      screen.cards = ZONES.map((z) =>
-        card(
-          `${z.id <= p.unlockedZone ? (p.bosses.includes(z.id) ? "✓" : "◈") : "Verrouillé ·"} ${z.name}`,
-          `Niveau ${z.level} · ${z.biome}${z.id === p.zone ? "\nTa région actuelle" : ""}`,
-        ),
-      );
-      push(
+      screen.subtitle = `Progression de la communauté · page ${result.page ?? 1} / ${result.pages ?? 1}`;
+      const travelers = result.travelers ?? [campaignMarker(p)];
+      screen.campaignMap = {
+        stages: ZONES.map((z) => ({
+          id: z.id, name: z.name, level: z.level,
+          unlocked: z.id <= p.unlockedZone, cleared: p.bosses.includes(z.id),
+          current: p.location === "campaign" && z.id === p.zone,
+        })),
+        travelers,
+      };
+      screen.cards = travelers.map((v, index) => card(
+        `${index + 1} · ${v.name}${v.id === p.id ? " · Toi" : ""}`,
+        `${v.completed ? "Campagne terminée" : `Étape ${v.stage + 1} · ${ZONES[v.stage].name}`}\nNiveau ${v.level} · ${v.location}${v.inBattle ? " · En combat" : ""}`,
+        { accent: index === 0 ? "gold" : "blue" },
+      ));
+      if (!p.battle) push(
         select(
           "zone",
           "Voyager vers une région accessible",
@@ -618,8 +627,39 @@ export function buildView(result, owner) {
           ),
         ),
       );
+      pages(result.page ?? 1, result.pages ?? 1, "map");
       back("campaign", "← Mon expédition");
+      screen.footer = "Étape = route la plus avancée débloquée. Revenir chasser ou rentrer conserve cette progression.";
       break;
+    }
+    case "encounters": {
+      const z = ZONES[p.zone];
+      screen.title = `Choisis ton adversaire`;
+      screen.subtitle = `${z.name} · 5 énergie par combat · aucun combat automatique`;
+      vitals();
+      screen.cards = z.enemies.map((_, index) => {
+        const e = campaignEnemy(z, index), elite = campaignEnemy(z, index, { elite: true });
+        return card(e.name,
+          `Niv. ${e.level} · ${e.hp} PV · ${e.attack} attaque\nÉlite : niv. ${elite.level} · ${elite.hp} PV · ${elite.attack} attaque\nButin : ${plainText(RESOURCES[z.resource])}, pierre, or et équipement possible.`,
+          { portrait: enemyPortrait(e.name) });
+      });
+      const ready = guardianReady(p), boss = campaignEnemy(z, 0, { boss: true });
+      screen.cards.push(card(boss.name,
+        `${ready ? "Disponible quand tu veux" : `${p.zoneWins[p.zone] ?? 0} / ${VICTORIES_FOR_BOSS} victoires de progression`}\nNiv. ${boss.level} · ${boss.hp} PV · ${boss.attack} attaque\nLa chasse ne fait pas avancer le gardien. XP et butin restent acquis ; le sac reste exposé.`,
+        { portrait: enemyPortrait(boss.name), accent: ready ? "gold" : "red" }));
+      const options = z.enemies.flatMap((name, index) => [
+        choice(`normal|${index}`, name, `Niv. ${z.level} · ${campaignEnemy(z, index).hp} PV`),
+        choice(`elite|${index}`, `Élite · ${name}`, `Niv. ${z.level + 1} · plus difficile, récompenses ×1,6`),
+      ]);
+      if (p.energy >= 5) {
+        push(select("encounter", "Avancer en campagne · choisir · 5 énergie",
+          [...options, ...(ready ? [choice("boss|0", `Gardien · ${z.boss}`, "Vaincs-le pour ouvrir la prochaine route")] : [])],
+          "progress", p.zone));
+        push(select("encounter", "Chasser sans avancer · choisir · 5 énergie", options, "farm", p.zone));
+      } else screen.notice = "Il faut 5 énergie pour lancer un combat. Tu récupères 1 énergie toutes les 5 minutes.";
+      push(row(nav("← Mon expédition", "campaign"), nav("Changer de région", "map")));
+      break;
+    }
     case "campaign": {
       const z = ZONES[p.zone],
         b = p.battle;
@@ -629,7 +669,7 @@ export function buildView(result, owner) {
         const e = b.enemy;
         if (!message && b.log?.length) screen.notice = b.log.join("\n");
         screen.title = e.name;
-        screen.subtitle = `Tour ${b.turn} · niveau ${e.level}${e.boss ? " · Gardien de région" : e.elite ? " · Élite" : ""}`;
+        screen.subtitle = `Tour ${b.turn} · niveau ${e.level}${e.boss ? " · Gardien de région" : e.elite ? " · Élite" : ""}${b.mode === "farm" ? " · Chasse aux ressources" : " · Progression"}`;
         screen.cards = [
           card(
             "Face à toi",
@@ -648,7 +688,7 @@ export function buildView(result, owner) {
           ),
           card(
             "Ton sac reste exposé",
-            `${p.bag.gold} or · ${p.bag.gear.length} équipement(s)\nFuir est garanti, mais coûte 25 % de l’or du sac et remet le compteur du gardien à zéro.`,
+            `${p.bag.gold} or · ${p.bag.gear.length} équipement(s)\nFuir coûte 25 % de l’or du sac. ${b.mode === "farm" ? "La chasse conserve le compteur du gardien, même en cas de fuite ou de défaite." : "Fuir ou perdre remet le compteur du gardien à zéro."}`,
           ),
         ];
         const fight = (move, label, disabled = false, style = 1) =>
@@ -712,8 +752,8 @@ export function buildView(result, owner) {
             { accent: "gold" },
           ),
           card(
-            "Continuer ou rentrer ?",
-            "Chaque ennemi demande de la préparation. Construis une caserne ou des remparts et fabrique la Protection du voyageur avant de progresser. Rentrer met ton butin à l’abri. Le gardien apparaît après deux victoires.",
+            guardianReady(p) ? "Le gardien t’attend" : "Avancer ou chasser ?",
+            "Choisis ton ennemi et son niveau de difficulté. Avancer débloque le gardien après deux victoires ; Chasser donne du butin sans faire avancer ce compteur. Tu peux répéter un ennemi aussi longtemps que tu veux, dans la limite de ton énergie et de tes PV.",
           ),
           card(
             "Le risque de la Brume",
@@ -722,14 +762,16 @@ export function buildView(result, owner) {
         ];
         push(
           row(
-            btn("Continuer · 5 énergie", "do", ["explore"], {
-              style: 1,
-              disabled: p.energy < 5,
-            }),
+            nav("Choisir un ennemi", "encounters"),
             btn("Rentrer et sécuriser", "do", ["returnHome"], { style: 3 }),
             nav("Carte", "map"),
           ),
         );
+        if (p.hunt?.zoneId === p.zone) push(row(btn(
+          "Chasser le même ennemi · 5 énergie", "huntAgain",
+          [p.zone, p.hunt.enemyIndex, p.hunt.elite ? "elite" : "normal"],
+          { style: 1, disabled: p.energy < 5 },
+        )));
       }
       break;
     }

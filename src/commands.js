@@ -26,6 +26,7 @@ export const NAVIGABLE = new Set([
   "creationRace",
   "map",
   "campaign",
+  "encounters",
   "base",
   "talents",
   "quests",
@@ -99,7 +100,7 @@ export function routePublicComponent(customId, values = []) {
         [action === "listing" ? "listingId" : "targetId"]: values[0] ?? a,
       },
     };
-  if (["profile", "market", "info", "social", "directory"].includes(action))
+  if (["profile", "market", "info", "social", "directory", "map"].includes(action))
     return { action, args: {} };
   if (action === "nav" && ["profile", "market", "info", "social"].includes(a))
     return { action: a, args: {} };
@@ -134,7 +135,6 @@ export function routeCommand(interaction) {
   };
 }
 const doActions = {
-  explore: () => ({}),
   returnHome: () => ({}),
   rest: () => ({}),
   daily: () => ({}),
@@ -210,12 +210,27 @@ export function routeComponent(customId, owner, values = []) {
       return { action: "creationClass", args: { raceId: a } };
     case "zone":
       return { action: "travel", args: { zoneId: Number(selected) } };
+    case "encounter": {
+      if (!["progress", "farm"].includes(a) || typeof selected !== "string") return null;
+      const match = /^(normal|elite|boss)\|([0-2])$/.exec(selected);
+      if (!match) return null;
+      return { action: "explore", args: {
+        mode: a, zoneId: Number(b), enemyIndex: Number(match[2]),
+        elite: match[1] === "elite", boss: match[1] === "boss",
+      } };
+    }
+    case "huntAgain":
+      return { action: "explore", args: {
+        mode: "farm", zoneId: Number(a), enemyIndex: Number(b), elite: c === "elite", boss: false,
+      } };
     case "fight":
       return {
         action: "combat",
         args: { move: a, battleId: b, turn: Number(c) },
       };
     case "do":
+      // Les anciens panneaux « Continuer » ouvrent aussi le nouveau choix.
+      if (a === "explore") return { action: "encounters", args: {} };
       if (a === "guildKick")
         return {
           action: "guildManage",

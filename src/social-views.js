@@ -101,6 +101,7 @@ export function buildSocialView(result, owner, ui) {
         row(
           nav("Classement des duels", "pvpLeaderboard"),
           nav("Les héros", "leaderboard"),
+          nav("Carte de la campagne", "map"),
           btn("Offrir un cadeau", "giftTargetMenu"),
         ),
       );

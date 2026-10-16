@@ -25,12 +25,13 @@ const socialRoutes = {
   cityDefensePlan: "cityInfo",
   cityTargets: "cityTargets",
   customize: "customizeInfo",
+  encounters: "encountersInfo",
+  map: "campaignMap",
 };
 
 const uiOnly = new Set([
   "info",
   "codex",
-  "map",
   "base",
   "campaign",
   "talents",

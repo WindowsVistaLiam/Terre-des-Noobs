@@ -225,6 +225,57 @@ function seal(ctx, x, y, tone) {
   ctx.restore();
 }
 
+const MAP_COLORS = ["#e3bd72", "#80b9dd", "#a5c98b", "#d99aaa", "#b6a0df", "#d5b18f"];
+function drawCampaignMap(ctx, map, y) {
+  const width = WIDTH - PAD * 2, cellWidth = (width - 60) / 4;
+  const position = (index) => {
+    const band = Math.floor(index / 4), column = band % 2 ? 3 - index % 4 : index % 4;
+    return { x: PAD + 12 + column * (cellWidth + 12), y: y + 46 + band * 174 };
+  };
+  box(ctx, PAD, y, width, 598, PALETTE.gold);
+  text(ctx, "LA ROUTE DES DOUZE GARDIENS", PAD + 20, y + 13,
+    { size: 17, title: true, color: PALETTE.gold });
+  for (let i = 1; i < map.stages.length; i++) {
+    const from = position(i - 1), to = position(i);
+    ctx.strokeStyle = map.stages[i].unlocked ? "#b89658" : "#525956";
+    ctx.lineWidth = 4;
+    ctx.setLineDash(map.stages[i].unlocked ? [] : [6, 7]);
+    ctx.beginPath();
+    ctx.moveTo(from.x + cellWidth / 2, from.y + 65);
+    ctx.lineTo(to.x + cellWidth / 2, to.y + 65);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  const bounds = [];
+  map.stages.forEach((stage, index) => {
+    const { x, y: top } = position(index);
+    const accent = stage.current ? PALETTE.blue : stage.cleared ? PALETTE.green
+      : stage.unlocked ? PALETTE.gold : "#525956";
+    ctx.fillStyle = "#101818";
+    ctx.fillRect(x, top, cellWidth, 144);
+    box(ctx, x, top, cellWidth, 144, accent);
+    text(ctx, `${String(index + 1).padStart(2, "0")}  ${stage.cleared ? "Vaincu" : stage.unlocked ? "Route ouverte" : "Verrouillé"}`,
+      x + 12, top + 10, { size: 16, color: accent });
+    text(ctx, stage.name, x + 12, top + 35,
+      { size: 19, width: cellWidth - 24, maxLines: 2, color: stage.unlocked ? PALETTE.paper : PALETTE.muted });
+    text(ctx, `Niv. ${stage.level}${stage.current ? " · Tu es ici" : ""}`,
+      x + 12, top + 91, { size: 15, color: PALETTE.muted });
+    map.travelers.forEach((traveler, marker) => {
+      if (traveler.stage !== index) return;
+      const cx = x + 25 + marker * 37, cy = top + 126;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.fillStyle = MAP_COLORS[marker];
+      ctx.fill();
+      text(ctx, String(marker + 1), cx - 4, cy - 8, { size: 15, color: "#101817" });
+    });
+    bounds.push({ x, y: top, width: cellWidth, height: 144 });
+  });
+  text(ctx, "Repères numérotés : héros ci-dessous · Bleu : ta région actuelle · Vert : gardien vaincu",
+    PAD + 20, y + 563, { size: 17, width: width - 40, maxLines: 1, color: PALETTE.muted });
+  return bounds;
+}
+
 export async function drawPanel(screen) {
   const file = BACKGROUNDS[screen.background] ?? BACKGROUNDS.profile;
   if (!backdrops.has(file)) backdrops.set(file, loadImage(asset(file)));
@@ -250,6 +301,8 @@ export async function drawPanel(screen) {
   if (noticeHeight) cursor += noticeHeight + 20;
   const metricsY = cursor;
   if (screen.metrics?.length) cursor += 112;
+  const mapY = cursor;
+  if (screen.campaignMap) cursor += 618;
   const cards = [];
   for (let i = 0; i < (screen.cards ?? []).length; i += columns) {
     const pair = screen.cards.slice(i, i + columns).map((card, offset) => {
@@ -405,6 +458,7 @@ export async function drawPanel(screen) {
       }
     });
   }
+  const mapNodes = screen.campaignMap ? drawCampaignMap(ctx, screen.campaignMap, mapY) : [];
   for (const card of cards) {
     const accent = colorOf(card.accent, PALETTE.line);
     box(ctx, card.x, card.y, card.width, card.height, accent);
@@ -462,5 +516,6 @@ export async function drawPanel(screen) {
     width: WIDTH,
     height,
     cards: cards.map(({ x, y, width, height }) => ({ x, y, width, height })),
+    mapNodes,
   };
 }

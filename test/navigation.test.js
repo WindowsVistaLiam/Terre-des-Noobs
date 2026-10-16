@@ -150,7 +150,9 @@ test("profil → aventure → carte → rencontre → tous les tours → retour 
   view = await viewFor(game, click(view, "⚔ Partir à l’aventure"));
   view = await viewFor(game, click(view, "Ouvrir la carte"));
   view = await viewFor(game, select(view, "zone", 0));
-  view = await viewFor(game, click(view, "Continuer · 5 énergie"));
+  view = await viewFor(game, click(view, "Choisir un ennemi"));
+  validate(view);
+  view = await viewFor(game, select(view, "encounter", "normal|0"));
   let turns = 0,
     stale;
   while ((await game.execute("profile", OWNER)).p.battle) {
