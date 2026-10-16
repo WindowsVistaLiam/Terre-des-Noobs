@@ -219,7 +219,13 @@ export async function decorateAppearance(game, result, viewerId) {
       ) && profile.banner
         ? await tx.get("profile_media", mediaKey(id, "banner"))
         : null;
-    return { portrait, banner };
+    const travelers = {};
+    if (result.type === "map") {
+      for (const traveler of (result.travelers ?? []).slice(0, 6))
+        travelers[traveler.id] = traveler.id === id ? portrait
+          : await tx.get("profile_media", mediaKey(traveler.id, "portrait"));
+    }
+    return { portrait, banner, ...(result.type === "map" ? { travelers } : {}) };
   });
   return {
     ...result,

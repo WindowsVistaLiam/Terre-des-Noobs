@@ -122,6 +122,9 @@ test(
       assert.equal((await restored.execute("profile", "seller")).p.energy, 95);
       const map = await restored.execute("campaignMap", "one");
       assert.ok(map.travelers.find((v) => v.id === "seller").inBattle);
+      const illustratedMap = await resolveRoute(restored, { action: "map" }, "one");
+      assert.equal(illustratedMap.appearance.travelers.seller.hash, portrait.hash);
+      assert.equal(illustratedMap.appearance.travelers.seller.data, portrait.data);
     } finally {
       if (a) await a.close();
       if (b) await b.close();

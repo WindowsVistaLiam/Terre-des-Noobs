@@ -154,7 +154,7 @@ export async function createCustomizedPreviewGame() {
 }
 
 export async function createCampaignPreviewGame() {
-  const game = await createPreviewGame();
+  const game = await createCustomizedPreviewGame();
   for (const [id, name, stage] of [
     ["scout", "Lyra des Ronces", 2],
     ["smith", "Thorgar Brisefer", 1],

@@ -49,8 +49,11 @@ function controls(view) {
 }
 function click(view, label) {
   const button = controls(view).find((c) => c.type === 2 && c.label === label);
-  assert.ok(button && !button.disabled, `Button unavailable: ${label}`);
-  const route = routeComponent(button.custom_id, OWNER);
+  const menu = controls(view).find((c) => c.options?.some((o) => o.label === label));
+  const option = menu?.options.find((o) => o.label === label);
+  const control = button ?? menu;
+  assert.ok(control && !control.disabled, `Action unavailable: ${label}`);
+  const route = routeComponent(control.custom_id, OWNER, option ? [option.value] : []);
   assert.ok(route, label);
   return route;
 }

@@ -93,6 +93,12 @@ export function routePublicComponent(customId, values = []) {
   if (typeof customId !== "string" || customId.length > 100) return null;
   const [prefix, action, a, b] = customId.split(":");
   if (prefix !== "tdnp") return null;
+  if (action === "menu") {
+    const selected = values[0];
+    if (typeof selected !== "string" || !selected.startsWith("tdnp:") ||
+      selected.split(":")[1] === "menu") return null;
+    return routePublicComponent(selected);
+  }
   if (["publicProfile", "playerCard", "listing"].includes(action))
     return {
       action,
@@ -187,6 +193,11 @@ export function routeComponent(customId, owner, values = []) {
   } = parsed;
   const selected = values[0];
   switch (action) {
+    case "menu": {
+      const nested = parseId(selected, owner);
+      if (!nested || nested.action === "menu") return null;
+      return routeComponent(selected, owner);
+    }
     case "nav":
       return NAVIGABLE.has(a)
         ? { action: a, args: { page: Number(b ?? 1), mine: c === "mine" } }

@@ -73,9 +73,12 @@ async function view(game, action, args = {}, owner = A) {
 }
 const controls = (v) => v.components.flatMap((r) => r.components);
 function click(v, label, owner = A) {
-  const c = controls(v).find((c) => c.label === label);
+  const button = controls(v).find((c) => c.type === 2 && c.label === label);
+  const menu = controls(v).find((c) => c.options?.some((o) => o.label === label));
+  const option = menu?.options.find((o) => o.label === label);
+  const c = button ?? menu;
   assert.ok(c && !c.disabled, label);
-  return routeComponent(c.custom_id, owner);
+  return routeComponent(c.custom_id, owner, option ? [option.value] : []);
 }
 function choose(v, action, value, owner = A) {
   const c = controls(v).find(

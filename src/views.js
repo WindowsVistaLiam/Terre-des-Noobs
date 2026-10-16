@@ -22,6 +22,7 @@ import { buildSocialView } from "./social-views.js";
 import { buildPublicView } from "./public-views.js";
 import { DEFAULT_PORTRAIT, enemyPortrait } from "./portraits.js";
 import { campaignEnemy, campaignMarker, guardianReady } from "./campaign.js";
+import { compactMenus } from "./menus.js";
 
 const slotName = { weapon: "Arme", armor: "Armure", charm: "Talisman" };
 const chapterNames = {
@@ -283,6 +284,7 @@ export function buildView(result, owner) {
     ...(message ? { notice: message } : {}),
   };
   const components = [];
+  const panel = () => ({ screen, components: compactMenus(components, owner, Boolean(result.public)) });
   const id = (...args) =>
     result.public ? publicId(...args) : uiId(owner, ...args);
   const btn = (
@@ -372,7 +374,7 @@ export function buildView(result, owner) {
   };
 
   if (buildPublicView(result, { screen, card, row, push }))
-    return { screen, components };
+    return panel();
   if (
     buildSocialView(result, owner, {
       screen,
@@ -390,7 +392,7 @@ export function buildView(result, owner) {
     })
   ) {
     footer();
-    return { screen, components };
+    return panel();
   }
   switch (result.type) {
     case "customize": {
@@ -611,10 +613,12 @@ export function buildView(result, owner) {
           unlocked: z.id <= p.unlockedZone, cleared: p.bosses.includes(z.id),
           current: p.location === "campaign" && z.id === p.zone,
         })),
-        travelers,
+        travelers: travelers.map((v) => ({ ...v,
+          portrait: result.appearance?.travelers?.[v.id] ?? DEFAULT_PORTRAIT,
+        })),
       };
       screen.cards = travelers.map((v, index) => card(
-        `${index + 1} · ${v.name}${v.id === p.id ? " · Toi" : ""}`,
+        `${v.name}${v.id === p.id ? " · Toi" : ""}`,
         `${v.completed ? "Campagne terminée" : `Étape ${v.stage + 1} · ${ZONES[v.stage].name}`}\nNiveau ${v.level} · ${v.location}${v.inBattle ? " · En combat" : ""}`,
         { accent: index === 0 ? "gold" : "blue" },
       ));
@@ -629,7 +633,7 @@ export function buildView(result, owner) {
       );
       pages(result.page ?? 1, result.pages ?? 1, "map");
       back("campaign", "← Mon expédition");
-      screen.footer = "Étape = route la plus avancée débloquée. Revenir chasser ou rentrer conserve cette progression.";
+      screen.footer = "Portraits et noms = progression maximale. Revenir chasser ou rentrer conserve cette progression.";
       break;
     }
     case "encounters": {
@@ -1859,7 +1863,7 @@ export function buildView(result, owner) {
     if (boss) screen.cards[0].portrait = enemyPortrait(boss.name);
   }
   footer();
-  return { screen, components };
+  return panel();
 }
 
 export async function render(result, owner) {

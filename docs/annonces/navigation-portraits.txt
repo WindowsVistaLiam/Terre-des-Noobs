@@ -1,0 +1,11 @@
+🗺️ **Une carte plus vivante et des menus plus simples !**
+
+👤 Sur la carte de campagne, les numéros des joueurs sont remplacés par leur **portrait et le nom de leur personnage**, directement à l’étape où ils en sont. Plusieurs héros au même endroit ? Chacun garde sa place et son nom visible !
+
+📋 Les nombreuses rubriques sont maintenant regroupées dans des **menus déroulants** :
+• **Actions et rubriques de ce menu** pour retrouver refuge, talents, personnalisation, amis, guilde, atelier…
+• **Navigation** pour passer entre Profil, Social, Marché et Info.
+
+⚔️ Les boutons restent pour les actions importantes : combat, retour au refuge, achats et confirmations.
+
+👉 Ouvrez un nouveau **/profil** pour découvrir les menus. Les anciennes commandes et vos sauvegardes restent compatibles.
