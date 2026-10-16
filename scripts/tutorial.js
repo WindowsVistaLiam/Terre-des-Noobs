@@ -291,7 +291,7 @@ const pages = [
         h: 205,
         tag: "02   CHOISIS TON IDENTITÉ",
         title: "Un peuple, une classe, un nom",
-        body: "16 peuples et 18 classes, toutes les combinaisons sont possibles. Race et classe sont définitives : consulte /info si tu hésites.",
+        body: "16 peuples et 18 classes, toutes les combinaisons sont possibles. Des sceaux du marchand permettent de changer de race ou de classe.",
       },
       {
         y: 807,

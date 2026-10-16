@@ -174,6 +174,14 @@ export async function createCampaignPreviewGame() {
   return game;
 }
 
+export async function createEvolutionPreviewGame() {
+  const game = await createCustomizedPreviewGame();
+  await game.execute("chooseSpecialization", "demo", { specId: "mage_2" });
+  for (const slot of ["title", "frame", "decoration"])
+    await game.execute("equipHonor", "demo", { slot, honorId: "chasseur" });
+  return game;
+}
+
 async function main() {
   const game = await createSocialPreviewGame();
   const destination = resolve(".local/previews");
@@ -196,6 +204,9 @@ async function main() {
     ressources: { action: "resources" },
     atelier: { action: "crafting" },
     carte: { action: "map" },
+    specialisations: { action: "specializations" },
+    exploits: { action: "honors" },
+    renouveau: { action: "identity" },
     metiers: { action: "codex", args: { category: "metiers" } },
   };
   for (const [name, route] of Object.entries(routes)) {
@@ -261,8 +272,12 @@ async function main() {
     await writeFile(resolve(destination, `${name}.png`),
       (await render(await resolveRoute(campaign, { action }, "demo"), "demo")).files[0].attachment);
   }
+  const evolution = await createEvolutionPreviewGame();
+  for (const [name, action] of [["inventaire-silhouette", "inventory"], ["specialisations-actives", "specializations"], ["exploits-cosmetiques", "honors"], ["renouveau-identite", "identity"], ["profil-decore", "publicProfile"]])
+    await writeFile(resolve(destination, `${name}.png`),
+      (await render(await resolveRoute(evolution, { action }, "demo"), "demo")).files[0].attachment);
   console.log(
-    `${Object.keys(routes).length + 8} panneaux de démonstration générés dans ${destination}`,
+    `${Object.keys(routes).length + 13} panneaux de démonstration générés dans ${destination}`,
   );
 }
 if (

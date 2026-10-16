@@ -1,0 +1,20 @@
+⚔️ **MISE À JOUR — Votre héros évolue !**
+
+🔄 **Changer de classe ou de race**
+Le marchand vend le **Cristal de vocation (750 or)** et le **Sceau du renouveau (1000 or)**. Utilisez-les au refuge depuis votre profil : niveau, campagne et objets sont conservés. Changer de classe rembourse vos talents ; changer de race conserve les anciens bâtiments raciaux mais les rend inactifs.
+
+🌳 **54 spécialisations**
+Chaque classe possède trois voies dès le **niveau 5**. Premier choix gratuit au refuge ; changement ultérieur : 300 or. Un nécromancien peut invoquer des serviteurs, renforcer son vol de vie ou maudire ses ennemis !
+👉 **Profil privé → Actions et rubriques → Spécialisations**
+
+🐺 **Des ennemis qui se combattent différemment**
+Armure, vitesse, poison, régénération, vol du sac… Lisez leurs particularités avant d’attaquer. La garde peut empêcher certains effets, et les potions dissipent le poison. Un pillard vaincu restitue l’or qu’il vous a volé !
+
+🏅 **Montrez vos exploits**
+Débloquez titres, cadres et décorations en combattant, en défendant la cité, en réussissant les raids et en aidant vos compagnons. Choisissez vos récompenses dans **Mes exploits** : elles sont visibles sur vos profils !
+
+🧝 **Un inventaire visuel**
+Votre race apparaît en silhouette, avec arme, armure et talisman autour : icônes, noms et objets portés sont visibles. Choisissez un objet dans la liste pour l’équiper ou le retirer.
+Vous pouvez importer un **avatar d’équipement** séparé de votre portrait et de votre bannière, depuis **Personnalisation du profil**.
+
+👉 Ouvrez un nouveau **/profil** après la mise à jour pour retrouver les menus !

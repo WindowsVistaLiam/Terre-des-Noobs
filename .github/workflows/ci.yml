@@ -33,7 +33,9 @@ jobs:
           import {createCustomizedPreviewGame} from './scripts/preview.js';
           import {resolveRoute} from './src/controller.js';
           const game = await createCustomizedPreviewGame();
-          for (const action of ['profile','customize','social','market','info','publicProfile','publicMarket']) {
+          await game.execute('chooseSpecialization','demo',{specId:'mage_2'});
+          await game.execute('equipHonor','demo',{slot:'frame',honorId:'chasseur'});
+          for (const action of ['profile','customize','social','market','info','publicProfile','publicMarket','inventory','identity','specializations','honors']) {
           const panel = await render(await resolveRoute(game,{action},'demo'),'demo');
           if (!panel.files[0].attachment.length) process.exit(1);
           console.log(action, 'Canvas PNG:', panel.files[0].attachment.length, 'bytes'); }

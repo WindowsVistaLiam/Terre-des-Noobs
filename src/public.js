@@ -8,6 +8,7 @@ import {
   RESOURCES,
 } from "./content.js";
 import { CITY_UPGRADES } from "./social-content.js";
+import { skillOf, specializationOf } from "./specializations.js";
 
 // Une projection explicite : aucun coffre, sac, courrier ou lien d’amitié.
 export async function publicProfile(game, targetId) {
@@ -24,6 +25,7 @@ export async function publicProfile(game, targetId) {
         raceId: p.raceId,
         classId: p.classId,
         level: p.level,
+        skill: skillOf(p), specialization: specializationOf(p)?.name ?? null,
         title: p.customization?.title ?? "",
         bio: p.customization?.bio ?? "",
         stats: statsOf(p),

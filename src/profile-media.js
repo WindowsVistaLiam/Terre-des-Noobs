@@ -1,10 +1,11 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { createHash } from "node:crypto";
 import { GameError, ensure } from "./game.js";
+import { honorAppearance } from "./honors.js";
 
 export const MEDIA_LIMIT = 5 * 1024 * 1024;
 const CDN_HOSTS = new Set(["cdn.discordapp.com", "media.discordapp.net"]);
-const SLOTS = new Set(["portrait", "banner"]);
+const SLOTS = new Set(["portrait", "banner", "avatar"]);
 export const mediaKey = (id, slot) => `${id}.${slot}`;
 export function uploadUrl(value) {
   let url;
@@ -123,11 +124,11 @@ export async function normalizeImage(bytes, slot) {
       "Impossible de lire cette image. Essaie un autre PNG, JPG ou WebP.",
     );
   }
-  const width = slot === "portrait" ? 256 : 1280,
-    height = slot === "portrait" ? 256 : 320;
+  const width = slot === "portrait" ? 256 : slot === "avatar" ? 512 : 1280,
+    height = slot === "portrait" ? 256 : slot === "avatar" ? 768 : 320;
   const canvas = createCanvas(width, height),
     ctx = canvas.getContext("2d");
-  const scale = Math.max(width / source.width, height / source.height);
+  const scale = (slot === "avatar" ? Math.min : Math.max)(width / source.width, height / source.height);
   ctx.fillStyle = "#15212a";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(
@@ -225,7 +226,9 @@ export async function decorateAppearance(game, result, viewerId) {
         travelers[traveler.id] = traveler.id === id ? portrait
           : await tx.get("profile_media", mediaKey(traveler.id, "portrait"));
     }
-    return { portrait, banner, ...(result.type === "map" ? { travelers } : {}) };
+    const avatar = ["inventory", "item", "customize"].includes(result.type) && profile.avatar
+      ? await tx.get("profile_media", mediaKey(id, "avatar")) : null;
+    return { portrait, banner, avatar, ...(p ? honorAppearance(p) : {}), ...(result.type === "map" ? { travelers } : {}) };
   });
   return {
     ...result,

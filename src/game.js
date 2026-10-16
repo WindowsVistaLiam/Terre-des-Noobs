@@ -2,6 +2,10 @@ import { randomInt, randomUUID } from "node:crypto";
 import { socialMethods, normalizeSocial } from "./social-game.js";
 import { DRAIN_RATES, drainHealing, hpChangeText } from "./combat-math.js";
 import { campaignEnemy, campaignMarker, guardianReady } from "./campaign.js";
+import { identityMethods } from "./identity-game.js";
+import { specializationOf, skillOf, activateTechnique, techniqueDamage, techniqueProtection } from "./specializations.js";
+import { normalizeAdventures } from "./honors.js";
+import { gearIcon } from "./equipment-art.js";
 import {
   RACES,
   CLASSES,
@@ -37,6 +41,7 @@ const emptyBag = () => ({ gold: 0, resources: {}, gear: [] });
 const shortId = () => randomUUID().replaceAll("-", "").slice(0, 12);
 export const gearLabel = (item) =>
   `${RARITIES[item.rarity].emoji} ${item.name}${item.upgrade ? ` +${item.upgrade}` : ""}`;
+export const activeBuilding = (p, b) => b && (!BUILDINGS[b.type].races.length || BUILDINGS[b.type].races.includes(p.raceId));
 
 export function statsOf(p) {
   const base = CLASSES[p.classId].stats;
@@ -54,6 +59,7 @@ export function statsOf(p) {
     xp: 0,
   };
   if (base.crit) s.crit += base.crit;
+  add(s, specializationOf(p)?.bonuses ?? {});
   add(s, RACES[p.raceId].bonuses);
   add(s, {
     attack: p.talents.attack * 2,
@@ -62,6 +68,7 @@ export function statsOf(p) {
     hp: p.talents.vitality * 10,
   });
   for (const b of p.buildings.filter(Boolean)) {
+    if (BUILDINGS[b.type].races.length && !BUILDINGS[b.type].races.includes(p.raceId)) continue;
     for (const [k, v] of Object.entries(BUILDINGS[b.type].bonuses))
       s[k] += v * b.level;
   }
@@ -137,6 +144,7 @@ export class Game {
       "customizeImage",
       "customizeReset",
       ...Object.keys(socialMethods),
+      ...Object.keys(identityMethods),
     ]);
     ensure(handlers.has(action), "Action inconnue.");
     return this.store.transaction(async (tx) => {
@@ -167,6 +175,7 @@ export class Game {
       "Cette sauvegarde nécessite une migration. Contacte l’administrateur.",
     );
     normalizeSocial(p);
+    normalizeAdventures(p);
     p.customization ??= { title: "", bio: "", portrait: null, banner: null };
     const s = statsOf(p);
     const energyTicks = Math.max(
@@ -205,6 +214,7 @@ export class Game {
   }
   async save(tx, p) {
     normalizeSocial(p);
+    normalizeAdventures(p);
     p.customization ??= { title: "", bio: "", portrait: null, banner: null };
     await tx.set("player", p.id, p);
   }
@@ -265,9 +275,9 @@ export class Game {
       armor: ["Cuirasse", "Manteau", "Cotte", "Armure"],
       charm: ["Talisman", "Anneau", "Médaillon", "Sceau"],
     };
+    const name = `${this.pick(names[slot])} ${this.pick(["de l’aube", "des brumes", "du serment", "de Vesper", "des étoiles"])}`;
     return {
-      id: shortId(),
-      name: `${this.pick(names[slot])} ${this.pick(["de l’aube", "des brumes", "du serment", "de Vesper", "des étoiles"])}`,
+      id: shortId(), name, icon: gearIcon({ name, slot }),
       level,
       slot,
       rarity,
@@ -290,6 +300,7 @@ export class Game {
     );
     const p = {
       schemaVersion: 1,
+      generation: shortId(),
       id,
       name: name.trim(),
       raceId,
@@ -338,6 +349,7 @@ export class Game {
     ensure(p.name.length >= 2, "Choisis un nom d’au moins deux caractères.");
     const starter = this.generateGear(1, "weapon", 0);
     starter.name = `Arme du premier serment`;
+    starter.icon = gearIcon(starter);
     p.gear.push(starter);
     p.equipment.weapon = starter.id;
     const s = statsOf(p);
@@ -379,7 +391,7 @@ export class Game {
   async customizeImage(tx, id, { slot, media }, now) {
     const p = await this.player(tx, id, now);
     ensure(
-      ["portrait", "banner"].includes(slot),
+      ["portrait", "banner", "avatar"].includes(slot),
       "Emplacement d’image inconnu.",
     );
     ensure(
@@ -388,8 +400,8 @@ export class Game {
         media.data.length <= 1_000_000 &&
         /^[A-Za-z0-9+/]+={0,2}$/.test(media.data) &&
         /^[a-f0-9]{64}$/.test(media.hash) &&
-        media.width === (slot === "portrait" ? 256 : 1280) &&
-        media.height === (slot === "portrait" ? 256 : 320),
+        media.width === (slot === "portrait" ? 256 : slot === "avatar" ? 512 : 1280) &&
+        media.height === (slot === "portrait" ? 256 : slot === "avatar" ? 768 : 320),
       "Image invalide : importe ton fichier depuis le bouton de personnalisation.",
     );
     await tx.set("profile_media", `${id}.${slot}`, {
@@ -405,13 +417,13 @@ export class Game {
       message:
         slot === "portrait"
           ? "Ton portrait est enregistré et apparaîtra sur les réponses du bot."
-          : "Ta bannière est enregistrée sur ton profil.",
+          : slot === "avatar" ? "Ton avatar d’équipement est enregistré." : "Ta bannière est enregistrée sur ton profil.",
     };
   }
   async customizeReset(tx, id, { slot }, now) {
     const p = await this.player(tx, id, now);
     ensure(
-      ["portrait", "banner", "text"].includes(slot),
+      ["portrait", "banner", "avatar", "text"].includes(slot),
       "Personnalisation inconnue.",
     );
     if (slot === "text") {
@@ -560,6 +572,7 @@ export class Game {
     );
     const s = statsOf(p);
     const e = b.enemy;
+    b.techniques ??= {};
     const log = [];
     const hpBefore = p.hp;
     const heal = (amount, source, detail = "") => {
@@ -588,6 +601,7 @@ export class Game {
       ensure((p.resources[move] ?? 0) > 0, `Il te faut ${RESOURCES[move]}.`);
       p.resources[move]--;
       if (move === "potion") {
+        b.poisonTurns = 0;
         const value = Math.round(
           s.hp * 0.4 * (1 + s.healing + (worldEvent(now).healing ?? 0)),
         );
@@ -605,7 +619,7 @@ export class Game {
         defense = e.defense;
       let attack = Math.max(s.attack, s.power * 0.85);
       if (move === "skill") {
-        const sk = CLASSES[p.classId].skill;
+        const sk = skillOf(p);
         ensure(
           b.turn >= b.skillReady,
           "Ta compétence sera disponible au prochain tour.",
@@ -616,6 +630,7 @@ export class Game {
         );
         p.mana -= sk.cost;
         b.skillReady = b.turn + 2;
+        activateTechnique(sk, b.techniques, b.turn);
         multiplier = sk.multiplier;
         log.push(`✨ ${sk.name} !`);
         if (["magic", "drain_magic", "heal"].includes(sk.kind)) {
@@ -634,25 +649,31 @@ export class Game {
       } else p.mana = Math.min(s.mana, p.mana + 3);
       if (multiplier > 0) {
         const critical = this.random() < s.crit;
-        const damage = this.hit(
+        const damage = Math.max(1, Math.round(this.hit(
           attack,
           defense,
           multiplier * (critical ? 1.6 : 1),
-        );
+        ) * (e.trait === "sentinel" && b.turn === 1 ? 0.7 : 1)));
         e.hp = Math.max(0, e.hp - damage);
         log.push(
           `${critical ? "💥 Critique !" : "⚔️"} Tu infliges ${damage} dégâts.`,
         );
         if (move === "skill") {
-          const kind = CLASSES[p.classId].skill.kind;
+          const kind = skillOf(p).kind;
           if (DRAIN_RATES[kind])
             heal(
-              drainHealing(kind, damage, s.healing),
+              Math.round(drainHealing(kind, damage, s.healing) * (1 + (skillOf(p).drainBonus ?? 0))),
               "Vol de vie",
-              `${DRAIN_RATES[kind] * 100} % de ${damage} dégâts${s.healing ? `, bonus de soins +${Math.round(s.healing * 100)} %` : ""}`,
+              `${DRAIN_RATES[kind] * 100} % de ${damage} dégâts${s.healing ? `, bonus de soins +${Math.round(s.healing * 100)} %` : ""}${skillOf(p).drainBonus ? `, spécialisation +${Math.round(skillOf(p).drainBonus * 100)} %` : ""}`,
             );
         }
       }
+    }
+    for (const effect of techniqueDamage(b.techniques, s, b.turn)) {
+      if (e.hp <= 0) break;
+      const dealt = Math.min(e.hp, effect.amount);
+      e.hp -= dealt;
+      log.push(`${effect.name} : ${dealt} dégâts supplémentaires.`);
     }
     if (e.hp <= 0) {
       log.push("Ennemi vaincu : aucune riposte.");
@@ -661,17 +682,41 @@ export class Game {
     const heavy = b.turn % 3 === 0;
     const enrage = b.turn > 20 ? 1 + (b.turn - 20) * 0.2 : 1;
     const phase = e.boss && e.hp < e.maxHp * 0.4 ? 1.2 : 1;
+    if (e.trait === "regenerating" && heavy) {
+      const healed = Math.min(e.maxHp - e.hp, Math.ceil(e.maxHp * 0.08));
+      e.hp += healed;
+      log.push(`Régénération ennemie : +${healed} PV.`);
+    }
+    const traitPower = (e.trait === "furious" && e.hp < e.maxHp * 0.5 ? 1.2 : 1) *
+      (heavy && ["brute", "swift"].includes(e.trait) ? 1.2 : 1);
     const damage = Math.max(
       1,
       Math.round(
-        this.hit(e.attack, s.defense, (heavy ? 1.8 : 1) * enrage * phase) *
-          (guarding ? 0.3 : 1),
+        this.hit(e.attack, s.defense * (e.trait === "arcane" ? 0.65 : 1), (heavy ? 1.8 : 1) * enrage * phase * traitPower) *
+          (guarding ? 0.3 : 1) * techniqueProtection(b.techniques, b.turn),
       ),
     );
     p.hp = Math.max(0, p.hp - damage);
     log.push(
       `${heavy ? "💢 Frappe lourde" : "🩸 Riposte"} : ${damage} dégâts.`,
     );
+    if (heavy && !guarding && p.hp > 0) {
+      if (e.trait === "thief") {
+        const stolen = Math.min(p.bag.gold, 5 + e.level * 2);
+        p.bag.gold -= stolen; e.stolenGold = (e.stolenGold ?? 0) + stolen;
+        log.push(`Le pillard vole ${stolen} or du sac. Vaincs-le pour les récupérer.`);
+      }
+      if (e.trait === "siphon") {
+        const drained = Math.min(p.mana, 5 + e.level); p.mana -= drained;
+        log.push(`Absorption ennemie : -${drained} mana.`);
+      }
+      if (e.trait === "venom") { b.poisonTurns = 2; log.push("Tu es empoisonné pour deux tours. Une potion peut dissiper le poison."); }
+    }
+    if ((b.poisonTurns ?? 0) > 0 && p.hp > 0) {
+      const poison = 2 + Math.ceil(e.level * 0.5);
+      p.hp = Math.max(0, p.hp - poison); b.poisonTurns--;
+      log.push(`Poison : ${poison} dégâts.`);
+    }
     log.push(hpChangeText(hpBefore, p.hp, s.hp));
     b.turn++;
     b.log = log;
@@ -714,6 +759,7 @@ export class Game {
       (30 + e.level * 10) * factor * (1 + s.gold + (event.gold ?? 0)),
     );
     p.bag.gold += gold;
+    if (e.stolenGold) { p.bag.gold += e.stolenGold; log.push(`Tu récupères les ${e.stolenGold} or dérobés.`); }
     const qty = Math.ceil((2 + this.random() * 3) * factor);
     add(p.bag.resources, { [ZONES[p.zone].resource]: qty, pierre: 2 });
     p.quests.gather += qty + 2;
@@ -727,6 +773,8 @@ export class Game {
       log.push(`🎒 ${gearLabel(item)} rejoint ton sac.`);
     }
     p.kills++;
+    const species = e.name.replace(/^Élite · /, "");
+    p.bestiary[species] = (p.bestiary[species] ?? 0) + 1;
     p.quests.kills++;
     if (!farming)
       p.zoneWins[p.zone] = Math.min(VICTORIES_FOR_BOSS, (p.zoneWins[p.zone] ?? 0) + 1);
@@ -902,6 +950,7 @@ export class Game {
   }
   accrue(p, now) {
     for (const b of p.buildings.filter(Boolean)) {
+      if (BUILDINGS[b.type].races.length && !BUILDINGS[b.type].races.includes(p.raceId)) { b.producedAt = now; continue; }
       const elapsed = Math.max(0, Math.min(12 * HOUR, now - b.producedAt));
       for (const [k, qty] of Object.entries(BUILDINGS[b.type].production))
         add(p.production, { [k]: (elapsed / HOUR) * qty * b.level });
@@ -1039,7 +1088,7 @@ export class Game {
     const p = await this.player(tx, id, now);
     this.home(p);
     ensure(
-      p.buildings.some((b) => ["forge", "forge_ancestrale"].includes(b?.type)),
+      p.buildings.some((b) => activeBuilding(p, b) && ["forge", "forge_ancestrale"].includes(b.type)),
       "Construis une forge pour enchanter.",
     );
     const item = p.gear.find((g) => g.id === itemId);
@@ -1486,6 +1535,9 @@ export class Game {
       hp: v.hp,
       damage: 0,
       healing: 0,
+      mana: statsOf(v).mana,
+      techniques: {},
+      rescued: new Set(),
     }));
     let bossHp = boss.hp,
       turns = 0;
@@ -1495,22 +1547,38 @@ export class Game {
       turns++
     ) {
       for (const f of fighters.filter((v) => v.hp > 0)) {
-        const sk = CLASSES[f.p.classId].skill;
-        if (sk.kind === "heal" && turns % 3 === 0) {
+        const sk = skillOf(f.p);
+        const specialized = Boolean(specializationOf(f.p));
+        const use = turns % 3 === 0 && (!specialized || f.mana >= sk.cost);
+        if (use) { f.mana = Math.max(0, f.mana - sk.cost); activateTechnique(sk, f.techniques, turns); }
+        else f.mana = Math.min(f.s.mana, f.mana + 3);
+        if (sk.kind === "heal" && use) {
           const heal = Math.ceil(f.s.power * 0.8 * (1 + f.s.healing));
           for (const ally of fighters.filter((a) => a.hp > 0)) {
             const before = ally.hp;
             ally.hp = Math.min(ally.s.hp, ally.hp + heal);
             f.healing += ally.hp - before;
+            if (ally.p.id !== f.p.id && before <= ally.s.hp * 0.25 && ally.hp > ally.s.hp * 0.25 && !f.rescued.has(ally.p.id)) {
+              f.rescued.add(ally.p.id); f.p.social.rescues = (f.p.social.rescues ?? 0) + 1;
+            }
           }
         }
+        if (specialized && use && sk.kind === "rage") f.hp = Math.max(1, f.hp - Math.ceil(f.s.hp * 0.08));
         const damage = this.hit(
-          Math.max(f.s.attack, f.s.power),
-          boss.defense,
-          (turns % 3 === 0 ? 1.7 : 1) * (this.random() < f.s.crit ? 1.6 : 1),
+          specialized && use && ["magic", "drain_magic"].includes(sk.kind) ? f.s.power : Math.max(f.s.attack, f.s.power),
+          boss.defense * (specialized && use && ["magic", "drain_magic", "pierce"].includes(sk.kind) ? 0.5 : 1),
+          (use ? specialized ? sk.multiplier : 1.7 : 1) *
+            (specialized && use && sk.kind === "execute" && bossHp / boss.hp < 0.35 ? 2 : 1) * (this.random() < f.s.crit ? 1.6 : 1),
         );
+        if (specialized && use && DRAIN_RATES[sk.kind]) {
+          const before = f.hp;
+          f.hp = Math.min(f.s.hp, f.hp + Math.round(drainHealing(sk.kind, Math.min(bossHp, damage), f.s.healing) * (1 + (sk.drainBonus ?? 0))));
+          f.healing += f.hp - before;
+        }
         bossHp -= damage;
         f.damage += damage;
+        for (const effect of techniqueDamage(f.techniques, f.s, turns)) { bossHp -= effect.amount; f.damage += effect.amount; }
+        if (bossHp <= 0) break;
       }
       if (bossHp <= 0) break;
       const targets =
@@ -1521,11 +1589,11 @@ export class Game {
         target.hp = Math.max(
           0,
           target.hp -
-            this.hit(
+            Math.round(this.hit(
               boss.attack,
               target.s.defense,
               (turns > 20 ? 1.7 : 1) * (turns % 3 === 0 ? 0.8 : 1.2),
-            ),
+            ) * techniqueProtection({ ...target.techniques, curse: Math.max(...fighters.map((f) => f.techniques.curse ?? 0)) }, turns)),
         );
     }
     const won = bossHp <= 0;
@@ -1538,6 +1606,7 @@ export class Game {
       if (won) {
         member.gold += boss.reward;
         member.raids++;
+        member.raidWins[party.raidId] = (member.raidWins[party.raidId] ?? 0) + 1;
         add(member.resources, {
           insigne: 1 + party.raidId,
           [boss.resource]: 5 + party.raidId * 3,
@@ -1588,3 +1657,4 @@ export class Game {
   }
 }
 Object.assign(Game.prototype, socialMethods);
+Object.assign(Game.prototype, identityMethods);

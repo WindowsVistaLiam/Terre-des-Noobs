@@ -1,15 +1,17 @@
 import { ZONES, VICTORIES_FOR_BOSS } from "./content.js";
+import { ENEMY_TRAITS, TRAITS } from "./bestiary.js";
 
 // Les niveaux dépendent de la région, jamais du niveau du héros qui revient chasser.
 export function campaignEnemy(zone, index = 0, { boss = false, elite = false } = {}) {
   const level = zone.level + (boss ? 2 : elite ? 1 : 0);
   const scale = boss ? 2.2 : elite ? 1.5 : 1;
-  const hp = Math.round((82 + level * 28) * scale);
+  const trait = boss ? null : ENEMY_TRAITS[zone.enemies[index]], modifiers = TRAITS[trait];
+  const hp = Math.round((82 + level * 28) * scale * (modifiers?.hp ?? 1));
   return {
     name: boss ? zone.boss : `${elite ? "Élite · " : ""}${zone.enemies[index]}`,
-    level, boss, elite, hp, maxHp: hp,
-    attack: Math.round((11 + level * 3) * (boss ? 1.25 : elite ? 1.12 : 1)),
-    defense: 3 + level * 1.5,
+    level, boss, elite, hp, maxHp: hp, trait,
+    attack: Math.round((11 + level * 3) * (boss ? 1.25 : elite ? 1.12 : 1) * (modifiers?.attack ?? 1)),
+    defense: Math.round((3 + level * 1.5) * (modifiers?.defense ?? 1)),
   };
 }
 

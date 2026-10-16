@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { ensure, statsOf } from "./game.js";
-import { CLASSES, DAY, HOUR, dayKey } from "./content.js";
+import { DAY, HOUR, dayKey } from "./content.js";
 import { drainHealing } from "./combat-math.js";
+import { skillOf, activateTechnique, techniqueDamage, techniqueProtection } from "./specializations.js";
 import {
   CITY_UPGRADES,
   cityUpgradeCost,
@@ -443,6 +444,7 @@ export const socialMethods = {
       mana: statsOf(v).mana,
       damage: 0,
       healed: 0,
+      techniques: {},
     }));
     let turns = 0;
     for (turns = 1; turns <= 40 && fighters.every((f) => f.hp > 0); turns++) {
@@ -452,12 +454,12 @@ export const socialMethods = {
         const f = fighters[i],
           enemy = fighters[1 - i];
         if (f.hp <= 0 || enemy.hp <= 0) break;
-        const sk = CLASSES[f.p.classId].skill;
+        const sk = skillOf(f.p);
         const use =
           turns % 2 === 1 &&
           f.mana >= sk.cost &&
           (sk.kind !== "heal" || f.hp < f.s.hp * 0.65);
-        if (use) f.mana -= sk.cost;
+        if (use) { f.mana -= sk.cost; activateTechnique(sk, f.techniques, turns); }
         else f.mana = Math.min(f.s.mana, f.mana + 3);
         if (use && sk.kind === "heal") {
           const heal = Math.round(
@@ -466,6 +468,9 @@ export const socialMethods = {
           const before = f.hp;
           f.hp = Math.min(f.s.hp, f.hp + heal);
           f.healed += f.hp - before;
+          for (const effect of techniqueDamage(f.techniques, f.s, turns)) {
+            const dealt = Math.min(enemy.hp, effect.amount); enemy.hp -= dealt; f.damage += dealt;
+          }
           continue;
         }
         const magical = use && ["magic", "drain_magic"].includes(sk.kind);
@@ -477,11 +482,11 @@ export const socialMethods = {
         const defense =
           enemy.s.defense *
           (magical || (use && sk.kind === "pierce") ? 0.5 : 1);
-        const damage = this.hit(
+        const damage = Math.max(1, Math.round(this.hit(
           magical ? f.s.power : Math.max(f.s.attack, f.s.power * 0.85),
           defense,
           mult * (this.random() < f.s.crit ? 1.6 : 1),
-        );
+        ) * techniqueProtection(enemy.techniques, turns)));
         const dealt = Math.min(enemy.hp, damage);
         enemy.hp = Math.max(0, enemy.hp - damage);
         f.damage += dealt;
@@ -489,9 +494,12 @@ export const socialMethods = {
           const before = f.hp;
           f.hp = Math.min(
             f.s.hp,
-            f.hp + drainHealing(sk.kind, dealt, f.s.healing),
+            f.hp + Math.round(drainHealing(sk.kind, dealt, f.s.healing) * (1 + (sk.drainBonus ?? 0))),
           );
           f.healed += f.hp - before;
+        }
+        for (const effect of techniqueDamage(f.techniques, f.s, turns)) {
+          const extra = Math.min(enemy.hp, effect.amount); enemy.hp -= extra; f.damage += extra;
         }
       }
       if (fighters.some((f) => f.hp <= 0)) break;

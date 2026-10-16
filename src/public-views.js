@@ -34,7 +34,7 @@ export function buildPublicView(result, ui) {
     case "publicProfile": {
       const t = result.target;
       screen.title = t.name;
-      screen.subtitle = `${RACES[t.raceId].name} · ${CLASSES[t.classId].name} · niveau ${t.level}`;
+      screen.subtitle = `${RACES[t.raceId].name} · ${t.specialization ?? CLASSES[t.classId].name} · niveau ${t.level}`;
       if (t.title) screen.subtitle += ` · ${t.title}`;
       screen.metrics = [
         { label: "Attaque", value: String(t.stats.attack) },
@@ -57,7 +57,7 @@ export function buildPublicView(result, ui) {
         ),
         card(
           "Ses capacités",
-          `${t.stats.hp} PV maximum · ${t.stats.mana} mana maximum\n${Math.round(t.stats.crit * 100)} % de critiques\n${CLASSES[t.classId].skill.name} : ${CLASSES[t.classId].skill.text}`,
+          `${t.stats.hp} PV maximum · ${t.stats.mana} mana maximum\n${Math.round(t.stats.crit * 100)} % de critiques\n${(t.skill ?? CLASSES[t.classId].skill).name} : ${(t.skill ?? CLASSES[t.classId].skill).text}`,
         ),
         card(
           "Son renom",

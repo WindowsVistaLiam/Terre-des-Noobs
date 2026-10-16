@@ -69,6 +69,7 @@ test("les anciens personnages reçoivent une personnalisation vide sans changer 
     bio: "",
     portrait: null,
     banner: null,
+    avatar: null,
   });
   for (const key of ["level", "xp", "gold", "hp", "mana", "energy"])
     assert.equal(after[key], before[key]);

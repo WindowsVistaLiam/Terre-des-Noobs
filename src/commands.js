@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 
 export const commands = [
   new SlashCommandBuilder()
@@ -18,6 +18,10 @@ export const commands = [
   new SlashCommandBuilder()
     .setName("social")
     .setDescription("Amis, duels, guildes, cité et défense entre compagnons"),
+  new SlashCommandBuilder().setName("admin-reset")
+    .setDescription("Réinitialiser un personnage après confirmation (serveur principal)")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addUserOption((option) => option.setName("joueur").setDescription("Le personnage à réinitialiser").setRequired(true)),
 ].map((command) => ({ ...command.toJSON(), dm_permission: false }));
 
 export const NAVIGABLE = new Set([
@@ -53,6 +57,7 @@ export const NAVIGABLE = new Set([
   "cityTargets",
   "guildRoster",
   "customize",
+  "identity", "specializations", "honors",
 ]);
 export const CATEGORIES = new Set([
   "races",
@@ -63,6 +68,7 @@ export const CATEGORIES = new Set([
   "recettes",
   "raids",
   "regles",
+  "specialisations", "bestiaire",
 ]);
 export const FORM_KINDS = new Set([
   "create",
@@ -81,6 +87,7 @@ export const FORM_KINDS = new Set([
   "profileText",
   "portraitUpload",
   "bannerUpload",
+  "avatarUpload",
 ]);
 
 export const uiId = (owner, action, ...args) =>
@@ -124,6 +131,9 @@ export function parseId(customId, owner) {
   return prefix === "tdn" && target === owner ? { action, params } : null;
 }
 export function routeCommand(interaction) {
+  if (interaction.commandName === "admin-reset") return {
+    action: "adminResetPreview", args: { targetId: interaction.options.getUser("joueur").id }, public: false,
+  };
   const targetId =
     interaction.commandName === "profil"
       ? (interaction.options?.getUser?.("joueur")?.id ?? interaction.user?.id)
@@ -181,6 +191,8 @@ const doActions = {
   cityWarToggle: () => ({}),
   citySiege: (a) => ({ guildId: a }),
   customizeReset: (a) => ({ slot: a }),
+  changeIdentity: (a, b) => ({ kind: a, target: b }),
+  chooseSpecialization: (a) => ({ specId: a }),
 };
 export function routeComponent(customId, owner, values = []) {
   if (customId?.startsWith("tdnp:"))
@@ -193,6 +205,10 @@ export function routeComponent(customId, owner, values = []) {
   } = parsed;
   const selected = values[0];
   switch (action) {
+    case "identityChoice": return { action: "identityPreview", args: { kind: a, target: selected } };
+    case "specializationChoice": return { action: "specializationPreview", args: { specId: selected } };
+    case "honorChoice": return { action: "equipHonor", args: { slot: a, honorId: selected } };
+    case "adminConfirm": return { action: "adminResetConfirm", args: { token: a } };
     case "menu": {
       const nested = parseId(selected, owner);
       if (!nested || nested.action === "menu") return null;
@@ -353,13 +369,13 @@ const input = (
 });
 export function buildModal(owner, kind, params = []) {
   if (!FORM_KINDS.has(kind)) return null;
-  if (["portraitUpload", "bannerUpload"].includes(kind))
+  if (["portraitUpload", "bannerUpload", "avatarUpload"].includes(kind))
     return {
       custom_id: uiId(owner, "submit", kind),
       title:
         kind === "portraitUpload"
           ? "Le portrait de ton personnage"
-          : "La bannière de ton personnage",
+          : kind === "avatarUpload" ? "Ton avatar d’équipement" : "La bannière de ton personnage",
       components: [
         {
           type: 18,
@@ -514,12 +530,13 @@ export function routeModal(customId, owner, fields) {
         args: { title: text("title"), bio: text("bio") },
       };
     case "portraitUpload":
-    case "bannerUpload": {
+    case "bannerUpload":
+    case "avatarUpload": {
       const files = fields.getUploadedFiles("image", true);
       return {
         action: "profileUpload",
         args: {
-          slot: kind === "portraitUpload" ? "portrait" : "banner",
+          slot: kind === "portraitUpload" ? "portrait" : kind === "avatarUpload" ? "avatar" : "banner",
           attachment: files?.values().next().value,
         },
       };

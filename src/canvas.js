@@ -1,6 +1,7 @@
 import { createCanvas, GlobalFonts, loadImage } from "@napi-rs/canvas";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_PORTRAIT } from "./portraits.js";
+import { drawItemIcon } from "./equipment-art.js";
 
 const asset = (name) =>
   fileURLToPath(new URL(`./assets/${name}`, import.meta.url));
@@ -10,11 +11,12 @@ const backdrops = new Map();
 const portraits = new Map();
 async function portraitImage(ref) {
   if (!ref) return null;
-  const key = ref.hash ?? `atlas-${ref.atlas}`;
+  const key = ref.hash ?? (ref.sheet === "races" ? "race-bodies" : `atlas-${ref.atlas}`);
   if (!portraits.has(key)) {
     const source =
       ref.data && ref.mime === "image/webp"
         ? Buffer.from(ref.data, "base64")
+        : ref.sheet === "races" ? asset("race-bodies.webp")
         : Number.isInteger(ref.atlas) && ref.atlas >= 0 && ref.atlas <= 3
           ? asset(`portraits/atlas-${ref.atlas}.webp`)
           : null;
@@ -32,15 +34,16 @@ async function portraitImage(ref) {
   const columns = ref.columns ?? 1;
   const cellW = image.width / columns,
     cellH = image.height / columns;
+  const inset = ref.sheet === "races" ? cellW * 0.08 : 0;
   return {
     image,
-    sx: ((ref.index ?? 0) % columns) * cellW,
+    sx: ((ref.index ?? 0) % columns) * cellW + inset,
     sy: Math.floor((ref.index ?? 0) / columns) * cellH,
-    sw: cellW,
+    sw: cellW - inset * 2,
     sh: cellH,
   };
 }
-function drawPortrait(ctx, picture, x, y, size, accent) {
+function drawPortrait(ctx, picture, x, y, size, accent, frame) {
   if (!picture) return;
   ctx.save();
   ctx.beginPath();
@@ -58,11 +61,18 @@ function drawPortrait(ctx, picture, x, y, size, accent) {
     size,
   );
   ctx.restore();
-  ctx.strokeStyle = accent;
+  ctx.strokeStyle = frame?.color ?? accent;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(x + size / 2, y + size / 2, size / 2 + 3, 0, Math.PI * 2);
   ctx.stroke();
+  if (frame) {
+    ctx.beginPath(); ctx.arc(x + size / 2, y + size / 2, size / 2 + 7, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      diamond(ctx, x + size / 2 + Math.cos(a) * (size / 2 + 8), y + size / 2 + Math.sin(a) * (size / 2 + 8), 3, frame.color);
+    }
+  }
 }
 const BACKGROUNDS = {
   profile: "brumeterre.png",
@@ -227,6 +237,39 @@ function seal(ctx, x, y, tone) {
 }
 
 const MAP_COLORS = ["#e3bd72", "#80b9dd", "#a5c98b", "#d99aaa", "#b6a0df", "#d5b18f"];
+function equipmentLayout(ctx, equipment, y) {
+  font(ctx, 19);
+  const slots = equipment.slots.map((slot) => ({ ...slot, width: 300,
+    height: 177 + wrapText(ctx, slot.item?.name ?? "Emplacement libre", 270).length * 27,
+  }));
+  const left = PAD + 24, right = WIDTH - PAD - 324;
+  slots.forEach((s, index) => {
+    s.x = index === 0 ? left : right;
+    s.y = index < 2 ? y + 55 : slots[1].y + slots[1].height + 20;
+  });
+  return { y, slots, height: Math.max(650, slots[2].y + slots[2].height - y + 48) };
+}
+function drawEquipment(ctx, data, layout, avatar) {
+  box(ctx, PAD, layout.y, WIDTH - PAD * 2, layout.height, PALETTE.gold);
+  text(ctx, "LA SILHOUETTE DE TON HÉROS", PAD + 22, layout.y + 15, { size: 18, title: true, color: PALETTE.gold });
+  const body = { x: WIDTH / 2 - 170, y: layout.y + 55, width: 340, height: 480 };
+  if (avatar) {
+    const scale = Math.min(body.width / avatar.sw, body.height / avatar.sh);
+    const w = avatar.sw * scale, h = avatar.sh * scale;
+    ctx.drawImage(avatar.image, avatar.sx, avatar.sy, avatar.sw, avatar.sh,
+      body.x + (body.width - w) / 2, body.y + (body.height - h) / 2, w, h);
+  }
+  text(ctx, data.name, body.x, layout.y + 544, { size: 22, width: body.width, maxLines: 2, title: true, color: PALETTE.gold });
+  text(ctx, data.race, body.x, layout.y + 611, { size: 17, width: body.width, color: PALETTE.muted });
+  for (const s of layout.slots) {
+    box(ctx, s.x, s.y, s.width, s.height, s.item ? PALETTE.gold : PALETTE.line);
+    text(ctx, s.label.toUpperCase(), s.x + 15, s.y + 12, { size: 16, color: PALETTE.muted });
+    drawItemIcon(ctx, s.item, s.x + 106, s.y + 40, 88);
+    text(ctx, s.item?.name ?? "Emplacement libre", s.x + 15, s.y + 141, { size: 19, width: 270, color: PALETTE.paper });
+    text(ctx, s.item ? `Niv. ${s.item.level} · +${s.item.upgrade ?? 0}` : "Choisis un objet dans ton coffre", s.x + 15, s.y + s.height - 26, { size: 15, color: PALETTE.muted, width: 270 });
+  }
+  return { avatar: body, slots: layout.slots.map(({ x, y, width, height, slot, item }) => ({ x, y, width, height, slot, name: item?.name ?? null })) };
+}
 function campaignMapLayout(ctx, map, y) {
   const width = WIDTH - PAD * 2, cellWidth = (width - 60) / 4;
   font(ctx, 18);
@@ -316,6 +359,7 @@ export async function drawPanel(screen) {
   );
   const mapPictures = await Promise.all((screen.campaignMap?.travelers ?? []).map(async (v) =>
     (await portraitImage(v.portrait)) ?? portraitImage(DEFAULT_PORTRAIT)));
+  const avatarPicture = await portraitImage(screen.equipment?.avatar);
   const measure = createCanvas(WIDTH, 100).getContext("2d");
   const tone = PALETTE[screen.tone] ?? PALETTE.gold;
   const columns = screen.compact ? 1 : 2;
@@ -332,11 +376,13 @@ export async function drawPanel(screen) {
   if (screen.metrics?.length) cursor += 112;
   const mapLayout = screen.campaignMap ? campaignMapLayout(measure, screen.campaignMap, cursor) : null;
   if (mapLayout) cursor += mapLayout.height + 20;
+  const equipment = screen.equipment ? equipmentLayout(measure, screen.equipment, cursor) : null;
+  if (equipment) cursor += equipment.height + 20;
   const cards = [];
   for (let i = 0; i < (screen.cards ?? []).length; i += columns) {
     const pair = screen.cards.slice(i, i + columns).map((card, offset) => {
       const picture = cardPictures[i + offset];
-      const textWidth = cardWidth - 42 - (picture ? 140 : 0);
+      const textWidth = cardWidth - 42 - (picture ? 140 : card.icon ? 96 : 0);
       font(measure, 21, true);
       const titles = wrapText(measure, card.title, textWidth);
       font(measure, 23);
@@ -348,7 +394,7 @@ export async function drawPanel(screen) {
         picture,
         textWidth,
         height: Math.max(
-          picture ? 168 : 0,
+          picture ? 168 : card.icon ? 136 : 0,
           42 +
             titles.length * 29 +
             12 +
@@ -447,8 +493,16 @@ export async function drawPanel(screen) {
     },
   );
   if (heroPortrait)
-    drawPortrait(ctx, heroPortrait, WIDTH - PAD - 112, 43, 112, tone);
+    drawPortrait(ctx, heroPortrait, WIDTH - PAD - 112, 43, 112, tone, screen.frame);
   else seal(ctx, WIDTH - PAD - 58, 99, tone);
+  if (screen.decoration) {
+    const { color, id } = screen.decoration;
+    for (let i = 0; i < 5; i++) {
+      const x = WIDTH - PAD - 140 + i * 34, y = 168 + (i % 2) * 5;
+      diamond(ctx, x, y, id === "stars" ? 5 : 3, color);
+      if (id === "leaves") { ctx.strokeStyle = color; ctx.beginPath(); ctx.ellipse(x, y, 8, 3, -0.6, 0, Math.PI * 2); ctx.stroke(); }
+    }
+  }
   if (noticeHeight) {
     box(ctx, PAD, headerBottom, WIDTH - PAD * 2, noticeHeight, tone);
     text(ctx, screen.notice, PAD + 18, headerBottom + 14, {
@@ -489,12 +543,14 @@ export async function drawPanel(screen) {
   }
   const mapMarkers = mapLayout ? drawCampaignMap(ctx, screen.campaignMap, mapLayout, mapPictures) : [];
   const mapNodes = (mapLayout?.nodes ?? []).map(({ x, y, width, height }) => ({ x, y, width, height }));
+  const equipmentBounds = equipment ? drawEquipment(ctx, screen.equipment, equipment, avatarPicture) : null;
   for (const card of cards) {
     const accent = colorOf(card.accent, PALETTE.line);
     box(ctx, card.x, card.y, card.width, card.height, accent);
     if (card.picture)
       drawPortrait(ctx, card.picture, card.x + 20, card.y + 24, 112, accent);
-    const textX = card.x + 21 + (card.picture ? 140 : 0);
+    if (card.icon) drawItemIcon(ctx, card.icon, card.x + 18, card.y + 24, 76);
+    const textX = card.x + 21 + (card.picture ? 140 : card.icon ? 96 : 0);
     let y = card.y + 21;
     y += text(ctx, card.title, textX, y, {
       size: 21,
@@ -548,5 +604,6 @@ export async function drawPanel(screen) {
     cards: cards.map(({ x, y, width, height }) => ({ x, y, width, height })),
     mapNodes,
     mapMarkers,
+    equipmentBounds,
   };
 }

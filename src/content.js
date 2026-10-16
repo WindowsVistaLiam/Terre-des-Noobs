@@ -489,6 +489,8 @@ export const ZONES = [
 ];
 
 export const RESOURCES = {
+  sceau_classe: "Cristal de vocation",
+  sceau_race: "Sceau du renouveau",
   bois: "🪵 Bois",
   pierre: "🪨 Pierre",
   fer: "⛓️ Fer",
@@ -506,6 +508,8 @@ export const RESOURCES = {
 // Le marchand du refuge fournit les provisions courantes ; les objets rares
 // et les équipements restent issus de l’exploration, de l’artisanat et des joueurs.
 export const SHOP = {
+  sceau_classe: { price: 750, description: "Change ta classe au refuge. Niveau, équipements et progression conservés ; talents remboursés." },
+  sceau_race: { price: 1000, description: "Change ta race au refuge. Les anciens bâtiments raciaux restent construits mais deviennent inactifs." },
   potion: {
     price: 18,
     description: "Restaure 40 % des PV maximaux, avec tes bonus de soin.",

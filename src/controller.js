@@ -11,6 +11,8 @@ import { normalizeCity, cityStats } from "./social-game.js";
 import { CITY_UPGRADES } from "./social-content.js";
 import { publicProfile, publicMarket, activityFor } from "./public.js";
 import { decorateAppearance, importAttachment } from "./profile-media.js";
+import { PermissionFlagsBits } from "discord.js";
+import { previewReset, confirmReset } from "./admin.js";
 
 const socialRoutes = {
   social: "socialInfo",
@@ -27,6 +29,8 @@ const socialRoutes = {
   customize: "customizeInfo",
   encounters: "encountersInfo",
   map: "campaignMap",
+  identity: "identityInfo", specializations: "specializationsInfo", honors: "honorsInfo",
+  identityPreview: "identityPreview", specializationPreview: "specializationPreview",
 };
 
 const uiOnly = new Set([
@@ -91,7 +95,7 @@ async function resolveRouteData(game, route, userId, requestId) {
   if (!saved && action !== "create") return { type: "welcome", now };
   if (action === "profileUpload") {
     ensure(
-      ["portrait", "banner"].includes(args.slot),
+      ["portrait", "banner", "avatar"].includes(args.slot),
       "Emplacement d’image inconnu.",
     );
     const media = await importAttachment(args.attachment, args.slot);
@@ -348,7 +352,7 @@ async function resolveRouteData(game, route, userId, requestId) {
 
 export function createInteractionHandler(
   game,
-  { renderer = render, cooldownMs = 200 } = {},
+  { renderer = render, cooldownMs = 200, adminGuildId } = {},
 ) {
   const cooldowns = new Map();
   const renders = new Map();
@@ -398,6 +402,12 @@ export function createInteractionHandler(
         );
         return;
       }
+      const adminAction = ["adminResetPreview", "adminResetConfirm"].includes(route.action);
+      if (adminAction) ensure(
+        adminGuildId && interaction.guildId === adminGuildId &&
+          interaction.memberPermissions?.has(PermissionFlagsBits.Administrator),
+        "Cette commande est réservée aux administrateurs du serveur principal.",
+      );
       if (route.action === "form") {
         const modal = buildModal(interaction.user.id, route.kind, route.params);
         ensure(modal, "Ce formulaire n’est plus disponible.");
@@ -455,7 +465,11 @@ export function createInteractionHandler(
       if (renders.size > 1000)
         for (const [key, value] of renders)
           if (value.at < now - 600000) renders.delete(key);
-      const result = await resolveRoute(
+      const result = adminAction
+        ? route.action === "adminResetPreview"
+          ? await previewReset(game, interaction.user.id, route.args.targetId, interaction.guildId)
+          : await confirmReset(game, interaction.user.id, route.args.token, interaction.guildId)
+        : await resolveRoute(
         game,
         route,
         interaction.user.id,

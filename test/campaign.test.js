@@ -112,7 +112,7 @@ test("parcours réel : deux combats, chasse répétée, gardien puis nouvelle r�
       assert.ok(++turns <= 60);
     }
     assert.equal(p.location, "campaign", "Le héros préparé doit gagner sans secours.");
-    assert.ok(originalHp >= 110);
+    assert.equal(originalHp, campaignEnemy(ZONES[args.zoneId], args.enemyIndex, args).hp);
     return p;
   };
   await finish(encounter()); await finish(encounter("progress", { enemyIndex: 1 }));

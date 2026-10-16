@@ -14,7 +14,7 @@ Clique ensuite sur « Créer mon aventurier » pour lancer la création de ton p
 
 ### Un peuple, une classe, un nom
 
-16 peuples et 18 classes, toutes les combinaisons sont possibles. Race et classe sont définitives : consulte /info si tu hésites.
+16 peuples et 18 classes, toutes les combinaisons sont possibles. Des sceaux du marchand permettent de changer de race ou de classe.
 
 ### Tes quatre portes d’entrée
 

@@ -52,6 +52,20 @@ Les images importées sont téléchargées une seule fois depuis les pièces joi
 
 Les « métiers » du codex décrivent les activités accessibles à tous : alchimie, forge, enchantement et récolte/recyclage. Ils ne constituent pas une seconde classe à choisir.
 
+## Faire évoluer et personnaliser son héros
+
+Depuis le profil privé, la liste **Actions et rubriques de ce menu** donne accès à **Spécialisations**, **Mes exploits** et **Changer de classe ou de race**.
+
+- Le **Cristal de vocation** coûte 750 or chez le marchand ; il change la classe au refuge, rembourse les talents dépensés et efface le choix de spécialisation. Le **Sceau du renouveau**, à 1000 or, change la race. Niveau, campagne, coffre et objets sont conservés. Les bâtiments exclusifs de l’ancien peuple restent construits mais inactifs ; aucune production n’est accumulée durant leur inactivité. Les jauges gardent leur proportion.
+- Chaque classe possède **trois spécialisations**, soit 54 voies, accessibles au niveau 5 au refuge. Le premier choix est gratuit ; changer ensuite coûte 300 or. Compétence, bonus et effets persistants sont pris en compte en campagne, en duel et en raid. Le nécromancien choisit entre légions invoquées, drain renforcé et malédictions.
+- Les 36 ennemis ont des profils et comportements distincts : rapidité, armure, régénération, poison, vol du sac, absorption de mana… Leurs particularités sont affichées avant le choix et en combat. Le pillard ne touche jamais au coffre et restitue l’or volé s’il est vaincu ; la garde prévient le vol. La potion dissipe le poison.
+- Neuf exploits donnent des **titres, cadres et décorations** visibles sur les profils publics et les menus. Ils récompensent victoires, bestiaire, raids, duels, défense de cité et sauvetage d’un allié en raid. Ce dernier exige un soin qui fait repasser un allié vivant de 25 % des PV ou moins à plus de 25 %, une fois par allié et par tentative. Les récompenses ne modifient aucune statistique. Les anciens compteurs donnent les exploits correspondants ; les découvertes de bestiaire sont recensées à partir de cette mise à jour.
+- Dans le coffre, une silhouette de la race est entourée des trois vrais emplacements : **arme, armure et talisman**. Chaque équipement possède une icône et son nom. Choisis un objet dans la liste, puis Équiper ou Déséquiper : la silhouette se met à jour. **Personnalisation du profil → Changer mon avatar d’équipement** importe une image indépendante du portrait et de la bannière ; **Avatar de ma race** rétablit la silhouette d’origine.
+
+![Inventaire avec silhouette et équipements](docs/images/inventaire-silhouette.png)
+
+**Administration :** `/admin-reset joueur:@joueur` ouvre une confirmation privée valable cinq minutes. La permission Discord Administrateur est exigée à l’ouverture et à la confirmation, uniquement dans le serveur principal défini par `DISCORD_GUILD_ID`. Sans cette variable, le reset est refusé. Le reset efface le personnage, ses annonces et ses images, retire ses liens et transfère les directions de guilde/groupe ; les groupes vides sont dissous. Les biens des autres joueurs et leurs blocages sont préservés. Chaque reset laisse une trace `admin_audit` en base. Cette commande s’ajoute aux quatre commandes des joueurs.
+
 ## Jouer ensemble
 
 Dans **Social → Voir les profils**, consulte un personnage pour demander son amitié, offrir un cadeau, proposer un duel ou l’inviter dans ta guilde si tu en as le droit. Le destinataire répond dans **Réception**. Les demandes d’amis et invitations durent sept jours ; un défi dure quinze minutes. Les listes d’amis sont limitées à 100, les demandes envoyées à 10 et les défis en attente à 3. Le blocage coupe les interactions directes dans les deux sens. Aucun message privé automatique n’est envoyé.
@@ -110,7 +124,7 @@ Inviter le bot avec les scopes **bot** et **applications.commands**, et les perm
 npm.cmd start
 ```
 
-Attendre **« 4 commandes enregistrées »** puis **« Brumeterre est ouverte »**. Dans Discord, ouvrir **`/profil`**, cliquer sur **Créer mon aventurier**, choisir sa race et sa classe, puis saisir son nom. Tout le parcours suivant passe par les boutons et les menus.
+Attendre **« 5 commandes enregistrées »** puis **« Brumeterre est ouverte »**. Les joueurs gardent leurs quatre commandes ; la cinquième est réservée à l’administration. Dans Discord, ouvrir **`/profil`**, cliquer sur **Créer mon aventurier**, choisir sa race et sa classe, puis saisir son nom. Tout le parcours suivant passe par les boutons et les menus.
 
 **Le mode démo est en mémoire : les personnages disparaissent à l’arrêt du bot.** Il est interdit en production. Pour conserver les parties en local, démarrer PostgreSQL avec Docker :
 

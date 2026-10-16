@@ -71,7 +71,7 @@ async function main() {
   client.on(Events.Warn, (warning) => console.warn("Discord:", warning));
   client.on(
     Events.InteractionCreate,
-    createInteractionHandler(new Game(store)),
+    createInteractionHandler(new Game(store), { adminGuildId: config.guildId }),
   );
   if (config.register) await registerCommands({ ...config, store });
   const cleanup = async () => {
@@ -80,6 +80,9 @@ async function main() {
         "DELETE FROM rpg_documents WHERE kind='interaction' AND (data->>'createdAt')::bigint < $1",
         [Date.now() - 7 * 86400000],
       );
+    if (store instanceof PostgresStore) await store.pool.query(
+      "DELETE FROM rpg_documents WHERE kind='admin_reset' AND (data->>'expiresAt')::bigint < $1", [Date.now()],
+    );
   };
   await cleanup();
   cleanupTimer = setInterval(() => {

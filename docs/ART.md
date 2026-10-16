@@ -11,7 +11,9 @@ Le projet local `fairy-slayer-v1` a servi de référence technique pour les piè
 - `src/assets/market.png` : rue marchande aux lanternes, pour le commerce, le coffre et l’atelier.
 - `src/assets/info.png` : bibliothèque ancienne, pour le codex.
 - `src/assets/portraits/atlas-0.webp` à `atlas-3.webp` : 51 portraits de bestiaire et un portrait d’aventurier par défaut. Les trois premières planches contiennent 16 portraits chacune, la dernière les trois boss de raid et le personnage par défaut. Les atlas sont carrés, en WebP de 1024 pixels. Le mapping est dans `src/portraits.js`.
-- Ces quatre illustrations originales sont générées à la conception avec ImageGen. Aucun appel d’IA pendant les parties. Les races réutilisent la bibliothèque avec 16 couleurs de texte distinctes, sans image supplémentaire.
+- Ces quatre illustrations originales sont générées à la conception avec ImageGen. Aucun appel d’IA pendant les parties. Dans l’encyclopédie, les races réutilisent la bibliothèque avec 16 couleurs de texte distinctes.
+- `src/assets/race-bodies.webp` : atlas original 4 × 4 de silhouettes en pied pour les seize races, créé avec l’outil ImageGen intégré. Le prompt et l’ordre des sujets sont dans [race-bodies-prompt.json](race-bodies-prompt.json). Le rendu d’équipement utilise une cellule par race et peut la remplacer par un avatar importé par le joueur.
+- `src/equipment-art.js` : icônes d’armes, armures et talismans dessinées en Canvas selon l’objet et sa rareté. Le nom est affiché sous chaque icône portée. Les cadres et décorations d’exploits sont aussi tracés en Canvas, sans image distante.
 - `src/assets/fonts/Cinzel-Regular.ttf` : Cinzel, pour les titres ; licence SIL Open Font License, fournie dans `OFL-Cinzel.txt`.
 - `src/assets/fonts/Lato-Regular.ttf` : Lato, pour le texte courant ; licence SIL Open Font License, fournie dans `OFL-Lato.txt`.
 
@@ -19,7 +21,7 @@ Les polices sont enregistrées explicitement dans Canvas, ce qui rend les images
 
 ## Prévisualiser
 
-`npm run preview` crée 24 exemples avec des personnages fictifs dans `.local/previews/`, dont le menu de personnalisation, un profil avec portrait/bannière et un combat avec deux portraits. Les personnages de démonstration et ces images ne sont pas des sauvegardes de joueurs.
+`npm run preview` crée 34 exemples avec des personnages fictifs dans `.local/previews/`, dont le menu de personnalisation, un profil décoré, une silhouette équipée, les spécialisations, les exploits et un combat avec deux portraits. Les personnages de démonstration et ces images ne sont pas des sauvegardes de joueurs.
 
 Le rendu utilise une largeur de 1280 pixels et une hauteur calculée selon le texte. Chaque ligne est mesurée avant dessin ; même un nom sans espaces revient à la ligne. Les pièces jointes sont en PNG, avec une description alternative allant jusqu’à 1024 caractères. Discord affiche l’image et les contrôles natifs en dessous. Les formulaires sont les fenêtres natives de Discord.
 

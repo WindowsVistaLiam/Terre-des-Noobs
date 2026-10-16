@@ -47,15 +47,17 @@ export function validateComponents(components, owner) {
   }
 }
 
-test("quatre commandes, avec une cible facultative pour consulter un profil", () => {
+test("quatre commandes publiques au jeu et une commande admin avec permission administrateur", () => {
   assert.deepEqual(
     commands.map((c) => c.name),
-    ["profil", "marché", "info", "social"],
+    ["profil", "marché", "info", "social", "admin-reset"],
   );
   assert.equal(commands[0].options[0].name, "joueur");
   assert.equal(commands[0].options[0].type, 6);
   assert.equal(commands[0].options[0].required, false);
-  for (const command of commands.slice(1)) assert.ok(!command.options?.length);
+  for (const command of commands.slice(1, 4)) assert.ok(!command.options?.length);
+  assert.equal(commands[4].default_member_permissions, "8");
+  assert.equal(commands[4].options[0].required, true);
   assert.equal(routeCommand({ commandName: "marché" }).action, "publicMarket");
 });
 

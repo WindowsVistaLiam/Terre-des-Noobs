@@ -14,7 +14,7 @@ import {
   worldEvent,
   VICTORIES_FOR_BOSS,
 } from "./content.js";
-import { statsOf, gearLabel } from "./game.js";
+import { statsOf, gearLabel, activeBuilding } from "./game.js";
 import { drawPanel, plainText } from "./canvas.js";
 import { uiId, publicId } from "./commands.js";
 import { RACE_COLORS, SOCIAL_TYPES } from "./social-content.js";
@@ -23,6 +23,10 @@ import { buildPublicView } from "./public-views.js";
 import { DEFAULT_PORTRAIT, enemyPortrait } from "./portraits.js";
 import { campaignEnemy, campaignMarker, guardianReady } from "./campaign.js";
 import { compactMenus } from "./menus.js";
+import { buildAdventureView } from "./adventure-views.js";
+import { skillOf, specializationOf, SPECIALIZATIONS } from "./specializations.js";
+import { traitOf, ENEMY_TRAITS, TRAITS } from "./bestiary.js";
+import { raceBody } from "./equipment-art.js";
 
 const slotName = { weapon: "Arme", armor: "Armure", charm: "Talisman" };
 const chapterNames = {
@@ -34,6 +38,7 @@ const chapterNames = {
   recettes: "Les recettes",
   raids: "Les grands périls",
   regles: "Le guide du voyageur",
+  specialisations: "Les spécialisations", bestiaire: "Le bestiaire",
 };
 const resourceText = (resources) =>
   Object.entries(resources)
@@ -73,16 +78,25 @@ const pageOf = (entries, requested = 1, size = 4) => {
 };
 const gearCard = (item, equipped = false) =>
   card(
-    `${equipped ? "◆ " : ""}${plainText(gearLabel(item))}`,
+    `${equipped ? "Porté · " : ""}${plainText(gearLabel(item))}`,
     `Niveau ${item.level} · ${slotName[item.slot]}\n${statText(item.stats)}`,
     {
       tag: RARITIES[item.rarity].name,
+      icon: item,
       accent: ["gold", "green", "blue", "purple", "gold"][item.rarity],
     },
   );
 
 export function codexEntries(category, p) {
   switch (category) {
+    case "specialisations":
+      return Object.entries(SPECIALIZATIONS).flatMap(([classId, specs]) => specs.map((s) =>
+        card(`${CLASSES[classId].name} · ${s.name}`, `${statText(s.bonuses)}\n${s.skill.name} · ${s.skill.cost} mana\n${s.skill.text}`, { tag: "Profil → Spécialisations · niveau 5 · au refuge" })));
+    case "bestiaire":
+      return ZONES.flatMap((z) => z.enemies.map((name) => {
+        const t = TRAITS[ENEMY_TRAITS[name]];
+        return card(name, `${z.name} · ${t.name}\n${t.text}\nVictoires recensées : ${p?.bestiary?.[name] ?? 0}`, { portrait: enemyPortrait(name) });
+      }));
     case "races":
       return Object.entries(RACES).map(([key, r]) =>
         card(
@@ -245,6 +259,8 @@ export function buildView(result, owner) {
     cards: [],
     portrait: result.appearance?.portrait ?? DEFAULT_PORTRAIT,
     banner: result.appearance?.banner,
+    frame: result.appearance?.frame,
+    decoration: result.appearance?.decoration,
     background:
       SOCIAL_TYPES.has(result.type) ||
       [
@@ -284,7 +300,11 @@ export function buildView(result, owner) {
     ...(message ? { notice: message } : {}),
   };
   const components = [];
-  const panel = () => ({ screen, components: compactMenus(components, owner, Boolean(result.public)) });
+  const panel = () => {
+    if (result.appearance?.earnedTitle && ["profile", "publicProfile", "playerCard"].includes(result.type))
+      screen.cards.push(card("Distinction", result.appearance.earnedTitle, { accent: "gold" }));
+    return { screen, components: compactMenus(components, owner, Boolean(result.public)) };
+  };
   const id = (...args) =>
     result.public ? publicId(...args) : uiId(owner, ...args);
   const btn = (
@@ -373,6 +393,15 @@ export function buildView(result, owner) {
     ];
   };
 
+  if (p && ["inventory", "item"].includes(result.type)) screen.equipment = {
+    avatar: result.appearance?.avatar ?? raceBody(p.raceId), name: p.name, race: RACES[p.raceId].name,
+    slots: Object.entries(slotName).map(([slot, label]) => ({ slot, label,
+      item: p.gear.find((i) => i.id === p.equipment[slot]) ?? null })),
+  };
+  if (buildAdventureView(result, owner, { screen, card, row, push, nav, btn, select, choice, statText })) {
+    footer(); return panel();
+  }
+
   if (buildPublicView(result, { screen, card, row, push }))
     return panel();
   if (
@@ -413,6 +442,7 @@ export function buildView(result, owner) {
           "Ta bannière",
           `${c.banner ? "Bannière personnelle enregistrée." : "Décor de Brumeterre par défaut."}\nChoisis une image large, idéalement au format 4:1. Elle habille l’en-tête de ton profil.`,
         ),
+        card("Ton avatar d’équipement", `${c.avatar ? "Image personnelle enregistrée." : `Silhouette de ta race : ${RACES[p.raceId].name}.`}\nCette image apparaît au centre du coffre. L’arme, l’armure et le talisman restent autour, avec leurs noms et leurs icônes.`),
         card(
           "Importer tes images",
           "Envoie un fichier directement dans le formulaire Discord : PNG, JPG ou WebP fixe, 5 Mo maximum, 4096 pixels par côté au maximum. Les images restent sauvegardées après redémarrage.",
@@ -422,6 +452,7 @@ export function buildView(result, owner) {
         row(
           btn("Changer mon portrait", "form", ["portraitUpload"]),
           btn("Changer ma bannière", "form", ["bannerUpload"]),
+          btn("Changer mon avatar d’équipement", "form", ["avatarUpload"]),
           btn("Titre et description…", "form", ["profileText"]),
         ),
       );
@@ -436,12 +467,14 @@ export function buildView(result, owner) {
           btn("Effacer les textes", "do", ["customizeReset", "text"], {
             disabled: !c.title && !c.bio,
           }),
+          btn("Avatar de ma race", "do", ["customizeReset", "avatar"], { disabled: !c.avatar }),
         ),
       );
       push(
         row(
           btn("Voir mon profil public", "viewProfile", [owner]),
           nav("Retour au carnet", "profile"),
+          nav("Titres, cadres et exploits", "honors"),
         ),
       );
       break;
@@ -532,7 +565,7 @@ export function buildView(result, owner) {
         ),
         card(
           "Il ne manque que ton nom",
-          "Nomme ton aventurier pour commencer. Les choix de race et de classe sont définitifs pour ce personnage.",
+          "Nomme ton aventurier pour commencer. Tu pourras changer de race ou de classe plus tard avec les sceaux du marchand.",
         ),
         card(
           "Le sac du départ",
@@ -554,7 +587,7 @@ export function buildView(result, owner) {
     }
     case "profile": {
       screen.title = p.name;
-      screen.subtitle = `${RACES[p.raceId].name} · ${CLASSES[p.classId].name} · niveau ${p.level}${p.bosses.includes(11) ? " · Briseur de Brume" : ""}`;
+      screen.subtitle = `${RACES[p.raceId].name} · ${specializationOf(p)?.name ?? CLASSES[p.classId].name} · niveau ${p.level}${p.bosses.includes(11) ? " · Briseur de Brume" : ""}`;
       if (p.customization?.title)
         screen.subtitle += ` · ${p.customization.title}`;
       vitals();
@@ -568,8 +601,8 @@ export function buildView(result, owner) {
           `${s.attack} attaque · ${s.defense} défense\n${s.power} puissance · ${Math.round(s.crit * 100)} % critiques\nCoffre : ${p.gold} or\nSac d’expédition : ${p.bag.gold} or`,
         ),
         card(
-          CLASSES[p.classId].skill.name,
-          `${CLASSES[p.classId].skill.text}\n${CLASSES[p.classId].skill.cost} mana · un tour sur deux`,
+          skillOf(p).name,
+          `${skillOf(p).text}\n${skillOf(p).cost} mana · un tour sur deux`,
         ),
         card(worldEvent(now).name, worldEvent(now).description, {
           accent: "green",
@@ -583,6 +616,7 @@ export function buildView(result, owner) {
           ),
           nav("⌂ Mon refuge", "base"),
           nav("Talents", "talents"),
+          nav("Spécialisations", "specializations"),
         ),
       );
       push(
@@ -591,12 +625,14 @@ export function buildView(result, owner) {
           act("Récupérer les provisions", "daily"),
           nav("Compagnons", "social"),
           nav("Voir les profils", "directory"),
+          nav("Mes exploits", "honors"),
         ),
       );
       push(
         row(
           nav("Personnalisation du profil", "customize"),
           btn("Voir mon profil public", "viewProfile", [owner]),
+          nav("Changer de classe ou de race", "identity"),
         ),
       );
       if (p.customization?.bio)
@@ -644,7 +680,7 @@ export function buildView(result, owner) {
       screen.cards = z.enemies.map((_, index) => {
         const e = campaignEnemy(z, index), elite = campaignEnemy(z, index, { elite: true });
         return card(e.name,
-          `Niv. ${e.level} · ${e.hp} PV · ${e.attack} attaque\nÉlite : niv. ${elite.level} · ${elite.hp} PV · ${elite.attack} attaque\nButin : ${plainText(RESOURCES[z.resource])}, pierre, or et équipement possible.`,
+          `Niv. ${e.level} · ${e.hp} PV · ${e.attack} attaque · ${e.defense} défense\n${traitOf(e)?.name} : ${traitOf(e)?.text}\nÉlite : niv. ${elite.level} · ${elite.hp} PV\nButin : ${plainText(RESOURCES[z.resource])}, pierre et or.`,
           { portrait: enemyPortrait(e.name) });
       });
       const ready = guardianReady(p), boss = campaignEnemy(z, 0, { boss: true });
@@ -677,7 +713,7 @@ export function buildView(result, owner) {
         screen.cards = [
           card(
             "Face à toi",
-            `Vie : ${e.hp} / ${e.maxHp}\n${e.attack} attaque · ${Math.round(e.defense)} défense${e.boss && e.hp < e.maxHp * 0.4 ? "\nLe gardien est enragé !" : ""}`,
+            `Vie : ${e.hp} / ${e.maxHp}\n${e.attack} attaque · ${Math.round(e.defense)} défense${traitOf(e) ? `\n${traitOf(e).name} : ${traitOf(e).text}` : ""}${e.boss && e.hp < e.maxHp * 0.4 ? "\nLe gardien est enragé !" : ""}`,
             { accent: "red", portrait: enemyPortrait(e.name) },
           ),
           card(
@@ -687,8 +723,8 @@ export function buildView(result, owner) {
               : "L’ennemi prépare son attaque.\nAttaque pour regagner du mana, ou utilise ta compétence.",
           ),
           card(
-            CLASSES[p.classId].skill.name,
-            `${CLASSES[p.classId].skill.cost} mana · ${b.turn >= b.skillReady ? "disponible" : "en récupération"}\n${CLASSES[p.classId].skill.text}`,
+            skillOf(p).name,
+            `${skillOf(p).cost} mana · ${b.turn >= b.skillReady ? "disponible" : "en récupération"}\n${skillOf(p).text}`,
           ),
           card(
             "Ton sac reste exposé",
@@ -703,7 +739,7 @@ export function buildView(result, owner) {
             fight(
               "skill",
               "✧ Compétence",
-              b.turn < b.skillReady || p.mana < CLASSES[p.classId].skill.cost,
+              b.turn < b.skillReady || p.mana < skillOf(p).cost,
             ),
             fight("guard", "◈ Défendre", false, 2),
           ),
@@ -788,7 +824,7 @@ export function buildView(result, owner) {
         card(
           `Emplacement ${i + 1} · ${b ? BUILDINGS[b.type].name : "Terrain libre"}`,
           b
-            ? `Niveau ${b.level} / 5\n${BUILDINGS[b.type].description}`
+            ? `Niveau ${b.level} / 5\n${activeBuilding(p, b) ? BUILDINGS[b.type].description : "INACTIF : réservé à ton ancien peuple. Aucun bonus ni production."}`
             : "Choisis cet emplacement pour consulter les plans et construire ton premier bâtiment.",
         ),
       );
@@ -827,7 +863,7 @@ export function buildView(result, owner) {
         const next = buildingCost(b.level + 1);
         screen.subtitle = `${BUILDINGS[b.type].name} · niveau ${b.level} / 5`;
         screen.cards = [
-          card(BUILDINGS[b.type].name, BUILDINGS[b.type].description),
+          card(BUILDINGS[b.type].name, activeBuilding(p, b) ? BUILDINGS[b.type].description : "Bâtiment conservé mais inactif pour ta race actuelle. Aucun bonus ni production."),
           card(
             b.level < 5 ? "Prochain niveau" : "Œuvre achevée",
             b.level < 5
@@ -1082,7 +1118,7 @@ export function buildView(result, owner) {
     case "inventory": {
       const page = pageOf(p.gear, result.page, 6);
       screen.title = "Le coffre du refuge";
-      screen.subtitle = `Équipement · page ${page.page} / ${page.pages} · ◆ objet porté`;
+      screen.subtitle = `Équipement · page ${page.page} / ${page.pages} · tes objets portés entourent ton avatar`;
       wallet();
       screen.cards = page.entries.map((item) =>
         gearCard(item, Object.values(p.equipment).includes(item.id)),
@@ -1155,7 +1191,7 @@ export function buildView(result, owner) {
               item.upgrade >= 5 ||
               p.location !== "base" ||
               !p.buildings.some((b) =>
-                ["forge", "forge_ancestrale"].includes(b?.type),
+                activeBuilding(p, b) && ["forge", "forge_ancestrale"].includes(b.type),
               ),
           }),
           btn("Vendre…", "form", ["sellItem", item.id], {
@@ -1326,6 +1362,7 @@ export function buildView(result, owner) {
         ),
       );
       pages(page.page, page.pages, "store");
+      push(row(nav("Utiliser un sceau : classe ou race", "identity")));
       break;
     }
     case "shopDetail": {

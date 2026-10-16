@@ -53,7 +53,7 @@ Enregistre les variables, applique les changements en attente avec **Deploy**, p
 Brumeterre est ouverte : ... · ... serveur(s).
 ```
 
-Au premier démarrage ou quand la définition des commandes change, tu verras aussi `4 commandes enregistrées`. La table des sauvegardes est créée automatiquement : aucune commande de migration manuelle n’est nécessaire.
+Au premier démarrage ou quand la définition des commandes change, tu verras aussi `5 commandes enregistrées` : les quatre commandes des joueurs et `/admin-reset`. Le reset exige la permission Administrateur et le serveur principal défini par `DISCORD_GUILD_ID`, y compris lors de la confirmation. La table des sauvegardes est créée automatiquement : aucune commande de migration manuelle n’est nécessaire.
 
 Le contrôle `/health` devient disponible lorsque Discord est connecté et PostgreSQL joignable. Le bot n’a pas besoin de domaine public ; il se connecte à Discord par Gateway. Le fichier `railway.json` définit une réplique, désactive la mise en veille et configure le contrôle de démarrage et les redémarrages sur erreur.
 

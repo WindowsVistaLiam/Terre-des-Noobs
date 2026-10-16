@@ -6,6 +6,7 @@ import { Game } from "../src/game.js";
 import { normalizeImage } from "../src/profile-media.js";
 import { createCanvas } from "@napi-rs/canvas";
 import { resolveRoute } from "../src/controller.js";
+import { previewReset, confirmReset } from "../src/admin.js";
 
 const url = process.env.TEST_DATABASE_URL;
 test(
@@ -125,6 +126,29 @@ test(
       const illustratedMap = await resolveRoute(restored, { action: "map" }, "one");
       assert.equal(illustratedMap.appearance.travelers.seller.hash, portrait.hash);
       assert.equal(illustratedMap.appearance.travelers.seller.data, portrait.data);
+      await a.transaction(async (tx) => {
+        const p = await tx.get("player", "two"); p.level = 5; p.gold = 2000; p.kills = 25;
+        await tx.set("player", "two", p);
+      });
+      await restored.execute("shopBuy", "two", { resource: "sceau_classe", quantity: 1 });
+      await restored.execute("changeIdentity", "two", { kind: "class", target: "mage" });
+      await restored.execute("chooseSpecialization", "two", { specId: "mage_2" });
+      await restored.execute("equipHonor", "two", { slot: "frame", honorId: "chasseur" });
+      const avatar = await normalizeImage(await image.encode("png"), "avatar");
+      await restored.execute("customizeImage", "two", { slot: "avatar", media: avatar });
+      const pending = await previewReset(restored, "seller", "two", "main");
+      await a.close(); a = new PostgresStore(url, options); await a.init();
+      const restarted = new Game(a);
+      const evolution = await resolveRoute(restarted, { action: "inventory" }, "two");
+      assert.equal(evolution.p.classId, "mage"); assert.equal(evolution.p.specialization, "mage_2");
+      assert.equal(evolution.p.resources.sceau_classe, 0);
+      assert.equal(evolution.appearance.avatar.hash, avatar.hash);
+      assert.equal(evolution.appearance.frame.id, "forest");
+      const resets = await Promise.allSettled([restarted, gb].map((game) => confirmReset(game, "seller", pending.token, "main")));
+      assert.equal(resets.filter((r) => r.status === "fulfilled").length, 1);
+      assert.equal(await a.transaction((tx) => tx.get("player", "two")), null);
+      assert.equal(await a.transaction((tx) => tx.get("profile_media", "two.avatar")), null);
+      assert.ok(await a.transaction((tx) => tx.get("player", "seller")));
     } finally {
       if (a) await a.close();
       if (b) await b.close();
