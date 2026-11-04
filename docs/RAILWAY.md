@@ -50,10 +50,10 @@ Si tes essais utilisaient `DEMO_MODE=true`, les personnages étaient conservés 
 Enregistre les variables, applique les changements en attente avec **Deploy**, puis consulte les logs du bot. Le message attendu est :
 
 ```text
-Brumeterre est ouverte : ... · ... serveur(s).
+Manga Club est ouvert : ... · ... serveur(s).
 ```
 
-Au premier démarrage ou quand la définition des commandes change, tu verras aussi `5 commandes enregistrées` : les quatre commandes des joueurs et `/admin-reset`. Le reset exige la permission Administrateur et le serveur principal défini par `DISCORD_GUILD_ID`, y compris lors de la confirmation. La table des sauvegardes est créée automatiquement : aucune commande de migration manuelle n’est nécessaire.
+Au premier démarrage ou quand la définition des commandes change, tu verras aussi `7 commandes enregistrées` : les six commandes des joueurs et `/admin-reset`. Le reset exige la permission Administrateur et le serveur principal défini par `DISCORD_GUILD_ID`, y compris lors de la confirmation. La table des sauvegardes est créée automatiquement : aucune commande de migration manuelle n’est nécessaire. Le catalogue et tous les portraits sont inclus dans le dépôt ; aucune clé manga ni nouveau service n’est nécessaire.
 
 Le contrôle `/health` devient disponible lorsque Discord est connecté et PostgreSQL joignable. Le bot n’a pas besoin de domaine public ; il se connecte à Discord par Gateway. Le fichier `railway.json` définit une réplique, désactive la mise en veille et configure le contrôle de démarrage et les redémarrages sur erreur.
 

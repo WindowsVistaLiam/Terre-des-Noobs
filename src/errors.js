@@ -1,3 +1,4 @@
+export class GachaError extends Error {}
 // Les erreurs réseau agrégées de Node peuvent avoir un message vide.
 export function errorMessage(error) {
   if (typeof error?.message === "string" && error.message.trim()) {

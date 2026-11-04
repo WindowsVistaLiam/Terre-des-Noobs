@@ -1,8 +1,8 @@
 {
   "name": "terre-des-noobs",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "RPG Discord social en français — les Chroniques de Brumeterre",
+  "description": "Gacha Discord social de personnages manga — Manga Club",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -13,9 +13,10 @@
     "register": "node --env-file-if-exists=.env scripts/register.js",
     "check": "node scripts/check.js",
     "test": "node --test",
-    "preview": "node scripts/preview.js",
-    "tutorial": "node scripts/tutorial.js",
-    "test:postgres": "node --env-file-if-exists=.env --test test/postgres.test.js"
+    "preview": "node scripts/preview-gacha.js",
+    "preview:gacha": "node scripts/preview-gacha.js",
+    "catalog:import": "node scripts/import-gacha.js",
+    "test:postgres": "node --env-file-if-exists=.env --test test/gacha-postgres.test.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.11",

@@ -1,18 +1,18 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { createHash } from "node:crypto";
-import { GameError, ensure } from "./game.js";
-import { honorAppearance } from "./honors.js";
+import { GachaError } from "./errors.js";
+const ensure = (condition, message) => { if (!condition) throw new GachaError(message); };
 
 export const MEDIA_LIMIT = 5 * 1024 * 1024;
 const CDN_HOSTS = new Set(["cdn.discordapp.com", "media.discordapp.net"]);
-const SLOTS = new Set(["portrait", "banner", "avatar"]);
+const SLOTS = new Set(["portrait", "banner"]);
 export const mediaKey = (id, slot) => `${id}.${slot}`;
 export function uploadUrl(value) {
   let url;
   try {
     url = new URL(value);
   } catch {
-    throw new GameError(
+    throw new GachaError(
       "Le fichier Discord n’est plus disponible. Importe-le à nouveau.",
     );
   }
@@ -96,7 +96,7 @@ export function imageDimensions(bytes) {
       p += length;
     }
   }
-  throw new GameError(
+  throw new GachaError(
     "Choisis une image PNG, JPG ou WebP valide (sans animation).",
   );
 }
@@ -120,15 +120,15 @@ export async function normalizeImage(bytes, slot) {
   try {
     source = await loadImage(bytes);
   } catch {
-    throw new GameError(
+    throw new GachaError(
       "Impossible de lire cette image. Essaie un autre PNG, JPG ou WebP.",
     );
   }
-  const width = slot === "portrait" ? 256 : slot === "avatar" ? 512 : 1280,
-    height = slot === "portrait" ? 256 : slot === "avatar" ? 768 : 320;
+  const width = slot === "portrait" ? 256 : 1280,
+    height = slot === "portrait" ? 256 : 320;
   const canvas = createCanvas(width, height),
     ctx = canvas.getContext("2d");
-  const scale = (slot === "avatar" ? Math.min : Math.max)(width / source.width, height / source.height);
+  const scale = Math.max(width / source.width, height / source.height);
   ctx.fillStyle = "#15212a";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(
@@ -165,7 +165,7 @@ export async function importAttachment(
       signal: AbortSignal.timeout(12000),
     });
   } catch {
-    throw new GameError(
+    throw new GachaError(
       "Le téléchargement a échoué. Importe à nouveau ton image depuis Discord.",
     );
   }
@@ -175,7 +175,7 @@ export async function importAttachment(
   );
   if (!(Number(response.headers.get("content-length") ?? 0) <= MEDIA_LIMIT)) {
     await response.body.cancel();
-    throw new GameError("L’image dépasse 5 Mo.");
+    throw new GachaError("L’image dépasse 5 Mo.");
   }
   const reader = response.body.getReader(),
     chunks = [];
@@ -187,54 +187,17 @@ export async function importAttachment(
       length += value.length;
       if (length > MEDIA_LIMIT) {
         await reader.cancel();
-        throw new GameError("L’image dépasse 5 Mo.");
+        throw new GachaError("L’image dépasse 5 Mo.");
       }
       chunks.push(Buffer.from(value));
     }
   } catch (error) {
-    if (error instanceof GameError) throw error;
-    throw new GameError(
+    if (error instanceof GachaError) throw error;
+    throw new GachaError(
       "Le téléchargement a été interrompu. Réessaie ton import.",
     );
   } finally {
     reader.releaseLock();
   }
   return normalizeImage(Buffer.concat(chunks), slot);
-}
-
-// Les octets restent dans un document séparé, hors des listes de personnages.
-export async function decorateAppearance(game, result, viewerId) {
-  if (result.duplicate) return result;
-  const id = ["publicProfile", "playerCard"].includes(result.type)
-    ? result.target.id
-    : (result.actorId ?? viewerId);
-  const data = await game.store.transaction(async (tx) => {
-    const p = result.p?.id === id ? result.p : await tx.get("player", id);
-    const profile = p?.customization ?? {};
-    const portrait = profile.portrait
-      ? await tx.get("profile_media", mediaKey(id, "portrait"))
-      : null;
-    const banner =
-      ["profile", "publicProfile", "playerCard", "customize"].includes(
-        result.type,
-      ) && profile.banner
-        ? await tx.get("profile_media", mediaKey(id, "banner"))
-        : null;
-    const travelers = {};
-    if (result.type === "map") {
-      for (const traveler of (result.travelers ?? []).slice(0, 6))
-        travelers[traveler.id] = traveler.id === id ? portrait
-          : await tx.get("profile_media", mediaKey(traveler.id, "portrait"));
-    }
-    const avatar = ["inventory", "item", "customize"].includes(result.type) && profile.avatar
-      ? await tx.get("profile_media", mediaKey(id, "avatar")) : null;
-    return { portrait, banner, avatar, ...(p ? honorAppearance(p) : {}), ...(result.type === "map" ? { travelers } : {}) };
-  });
-  return {
-    ...result,
-    appearance: data,
-    ...(result.activity
-      ? { activity: await decorateAppearance(game, result.activity, viewerId) }
-      : {}),
-  };
 }

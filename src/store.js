@@ -26,8 +26,8 @@ export class PostgresStore {
       await client.query("BEGIN");
       await client.query("SET LOCAL lock_timeout = '10s'");
       await client.query("SET LOCAL statement_timeout = '15s'");
-      // Un verrou partagé entre toutes les instances : achats, dons et raids atomiques.
-      // Adapté à un bot de communauté. Voir docs/ARCHITECTURE.md pour le dimensionnement.
+      // Un verrou partagé entre toutes les instances : tirages, achats et échanges atomiques.
+      // Adapté à un bot de communauté. Voir docs/GACHA.md pour le dimensionnement.
       await client.query("SELECT pg_advisory_xact_lock(742019001)");
       const tx = {
         get: async (kind, id) =>

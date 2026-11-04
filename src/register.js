@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { REST, Routes } from "discord.js";
-import { commands } from "./commands.js";
+import { gachaCommands as commands } from "./gacha-controller.js";
 
 export async function registerCommands({
   token,

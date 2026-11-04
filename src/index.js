@@ -1,9 +1,9 @@
 import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 import { PostgresStore, MemoryStore } from "./store.js";
-import { Game } from "./game.js";
+import { GachaGame } from "./gacha-game.js";
 import { loadConfig } from "./config.js";
 import { registerCommands } from "./register.js";
-import { createInteractionHandler } from "./controller.js";
+import { createGachaHandler } from "./gacha-controller.js";
 import { createHealthServer } from "./health.js";
 import { errorMessage, databaseStartupMessage } from "./errors.js";
 
@@ -46,7 +46,7 @@ async function main() {
     throw new Error(databaseStartupMessage(error, config), { cause: error });
   }
   if (config.demo)
-    console.warn("MODE DÉMO : les personnages seront perdus au redémarrage.");
+    console.warn("MODE DÉMO : les collections seront perdues au redémarrage.");
   client = new Client({
     intents: [GatewayIntentBits.Guilds],
     allowedMentions: { parse: [] },
@@ -61,28 +61,22 @@ async function main() {
   });
   client.once(Events.ClientReady, (ready) => {
     console.log(
-      `Brumeterre est ouverte : ${ready.user.tag} · ${ready.guilds.cache.size} serveur(s).`,
+      `Manga Club est ouvert : ${ready.user.tag} · ${ready.guilds.cache.size} serveur(s).`,
     );
-    ready.user.setActivity("/profil • Brumeterre vous attend", {
+    ready.user.setActivity("/gacha • Collectionne tes mangas", {
       type: ActivityType.Playing,
     });
   });
   client.on(Events.Error, (error) => console.error("Discord:", error.message));
   client.on(Events.Warn, (warning) => console.warn("Discord:", warning));
+  const game = new GachaGame(store);
   client.on(
     Events.InteractionCreate,
-    createInteractionHandler(new Game(store), { adminGuildId: config.guildId }),
+    createGachaHandler(game, { adminGuildId: config.guildId }),
   );
   if (config.register) await registerCommands({ ...config, store });
   const cleanup = async () => {
-    if (store instanceof PostgresStore)
-      await store.pool.query(
-        "DELETE FROM rpg_documents WHERE kind='interaction' AND (data->>'createdAt')::bigint < $1",
-        [Date.now() - 7 * 86400000],
-      );
-    if (store instanceof PostgresStore) await store.pool.query(
-      "DELETE FROM rpg_documents WHERE kind='admin_reset' AND (data->>'expiresAt')::bigint < $1", [Date.now()],
-    );
+    await game.cleanup();
   };
   await cleanup();
   cleanupTimer = setInterval(() => {

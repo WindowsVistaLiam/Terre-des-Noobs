@@ -1,201 +1,106 @@
-# Terre des Noobs — Les Chroniques de Brumeterre
+# Terre des Noobs — Manga Club
 
-Un RPG Discord social en français, avec des **menus en images Canvas** et **quatre commandes**. Univers original de fantasy sombre : cadres de métal ancien, dorures, forteresse dans la Brume et typographie médiévale.
+Un **gacha Discord social en français**, inspiré du principe de collection de Kyara : ouvrir des boosters, découvrir des personnages de manga, compléter des albums et échanger ses doublons. Les menus, cartes et résultats sont dessinés en **Canvas**, avec les contrôles natifs de Discord. Aucun service d’IA n’est utilisé en jeu.
 
-> La cloche de Rosée a sonné sans sonneur. Les routes disparaissent dans la Brume. Bâtissez un refuge, rassemblez vos compagnons et retrouvez le Roi oublié.
+**Catalogue embarqué : 4 978 personnages, 1 471 univers et 4 978 portraits**, importés depuis les données publiques AniList. One Piece, Naruto, Dragon Ball, Bleach, Jujutsu Kaisen, Demon Slayer, Hunter × Hunter, Berserk, Frieren… Ce catalogue est large, mais ne prétend pas contenir tous les personnages de tous les mangas existants. Il fonctionne sans accès à Kyara ni à une API externe au démarrage ou pendant les tirages.
 
-Pour accueillir les joueurs : [six fiches de tutoriel en images](docs/tutorial/LIRE-MOI.md), [message d’annonce Discord](docs/tutorial/annonce-discord.txt) et [kit complet à télécharger](docs/Terre-des-Noobs-kit-joueur.zip). Les fiches sont dessinées en Canvas avec des formes, pictogrammes et textes, sans illustrations générées par IA. `npm run tutorial` les régénère.
+## Jouer
 
-## Quatre portes d’entrée, tout le reste dans les menus
+| Commande | Accès |
+| --- | --- |
+| `/profil` | Vitrine, favoris, quotidien, boosters, personnalisation |
+| `/profil joueur:@ami` | Profil public d’un autre collectionneur |
+| `/gacha` | Boosters gratuits ou obtenus contre des éclats |
+| `/collection` | Cartes, doublons, filtres, recherche, vente et échanges |
+| `/marché` | Annonces, achats, mes ventes, recherche et souhaits |
+| `/social` | Amis, demandes, propositions d’échange et blocages |
+| `/info` | Règles et taux ; navigation vers albums, missions et classement |
 
-| Commande      | Ce qu’on y trouve                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **`/profil`** | Création du héros, statistiques, aventure et combats, refuge, bâtiments, talents, contrats et provisions                              |
-| **`/social`** | Amis, demandes, invitations, duels, guildes, officiers, cité, invasions, sièges, cadeaux et groupes de raid                           |
-| **`/marché`** | Marché global, annonces, achat et vente, coffre, équipement, ressources, marchand de provisions, artisanat, enchantement et recyclage |
-| **`/info`**   | Encyclopédie paginée : races, classes, métiers d’artisanat, objets, bâtiments, recettes, raids et règles                              |
+Une seule commande suffit : le menu **Explorer le Manga Club…** relie toutes les rubriques. Les boutons restent réservés aux ouvertures, confirmations et pages. Aucune commande par carte et aucun identifiant à recopier pour jouer ou échanger.
 
-La liste **Navigation** relie les quatre espaces. Une liste **Actions et rubriques de ce menu** rassemble les accès secondaires : refuge, talents, personnalisation, amis, guilde, cité, atelier… Les boutons restent réservés aux actions directes importantes, au combat, aux confirmations et à la pagination. Les autres listes permettent de choisir une race, une classe, une destination, un équipement, un lot, un bâtiment ou une recette. Les formulaires servent à saisir du texte, des quantités ou à importer les images du personnage. **Aucun identifiant d’objet à recopier, aucune sous-commande à apprendre.** Les anciens boutons restent utilisables.
+Les profils, le marché, le guide et **les résultats d’ouverture** sont publics. Collection, demandes, confirmations et gestion du profil restent privés. Un contrôle sur une image publique ouvre un panneau personnel ; il ne remplace pas le message partagé. Chaque réponse mentionne uniquement son auteur, sans autoriser `@everyone` ni les rôles. Les portraits personnalisés, ou la première favorite à défaut, servent de repère en haut à droite.
 
-Les panneaux, résultats, confirmations et erreurs sont des PNG générés localement par Canvas. Les boutons, listes et formulaires restent les contrôles natifs de Discord. Un menu remplace son image précédente : les pièces jointes ne s’accumulent pas. Les images incluent une description alternative.
+## Boosters et progression
 
-**Visibilité dans le salon :** `/profil`, `/marché` et `/info` sont publics. `/profil joueur:@ami` montre le héros d’un autre joueur, même si tu n’as pas encore de personnage. Le profil public présente les statistiques, l’équipement porté, la guilde et la progression. Les coffres, ressources et relations privées ne sont pas affichés. Les offres publiques du marché n’affichent aucun solde personnel.
+- Départ : **300 éclats, 10 boosters rechargeables et 5 boosters de bienvenue**.
+- **1 booster gratuit toutes les 10 minutes**, jusqu’à **10** en réserve rechargeable. Les boosters offerts sont stockés séparément, sans expiration. Les rechargeables sont utilisés en premier ; le temps passé au plafond ne crée pas de recharge cachée.
+- **5 cartes par booster**, ouverture par 1 ou par 5. Chaque carte possède une rareté fixe, une puissance et une aura de collection. Il n’y a plus de combat RPG.
+- **Mix multivers**, **sélection du jour**, et **boosters par univers** : la liste propose les principaux univers, et chaque album d’au moins six personnages donne accès à son propre booster. Les deux monnaies d’ouverture fonctionnent pour chacun.
+- Booster contre **150 éclats**, avec confirmation. Les éclats se gagnent uniquement en jouant : quotidien, missions, albums, recyclage et marché. Aucun paiement réel.
+- Quotidien : **3 boosters et 100 éclats**, plus 10 éclats par jour consécutif supplémentaire, plafonné à 160. Renouvellement à **minuit UTC** (01 h en hiver / 02 h en été en France).
+- Missions quotidiennes et objectifs permanents à réclamer dans les menus ; album complété d’au moins six personnages : **250 éclats et 2 boosters**, une seule fois par univers.
+- Les **découvertes** restent dans l’album après une vente ou un échange. Le classement porte sur les personnages découverts ; l’inventaire représente les copies réellement détenues.
 
-Les boutons d’un panneau public ouvrent une réponse privée pour la personne qui clique, sans remplacer le message partagé. **Mon carnet privé** permet de jouer depuis son profil. `/social`, les formulaires, les coffres et les tours de combat restent privés. Depuis **Voir les profils**, choisis un héros puis **Profil complet** pour consulter sa fiche.
+| Rareté | Taux de base par carte | Recyclage / copie |
+| --- | ---: | ---: |
+| Commune | 50 % | 2 éclats |
+| Peu commune | 28 % | 5 éclats |
+| Rare | 15 % | 12 éclats |
+| Épique | 5 % | 35 éclats |
+| Mythique | 1,7 % | 120 éclats |
+| Légendaire | 0,3 % | 500 éclats |
 
-La création de héros, les départs, les résultats de combat, les constructions, la fabrication d’équipement, les mises en vente, les recrutements et améliorations de guilde, les duels terminés, les raids, les fortifications, les invasions repoussées et les sièges publient une courte chronique Canvas dans le salon où l’action a été faite. Les demandes d’amis, blocages, cadeaux, invitations non acceptées et tours ordinaires ne publient rien. Les annonces proposent un bouton pour voir le profil du héros. Aucune mention ne déclenche de notification.
+La **cinquième carte** est toujours **rare ou mieux** : ses taux sont renormalisés sur ces rangs. Après 19 boosters sans épique, le 20e garantit une épique ou mieux ; après 99 sans mythique, le 100e garantit une mythique ou mieux. Les deux compteurs se réinitialisent dès qu’une carte du rang concerné ou supérieur apparaît, et sont partagés entre les boosters. Un petit univers peut ne pas comporter toutes les raretés : les rangs absents sont retirés du tirage et ses taux propres sont affichés avant ouverture. Une garantie utilise le meilleur rang présent si le rang attendu est absent.
 
-Le Profil conserve son panorama d’origine. Social utilise une salle de guilde, le Marché une rue marchande, et Info une bibliothèque. Les peuples du codex partagent cette bibliothèque avec une couleur de texte propre à chacun.
+Les raretés, puissance et aura sont des choix d’équilibrage du jeu : elles ne constituent pas un classement officiel des personnages.
 
-**Personnaliser son héros :** `/profil` → **Mon carnet privé** → liste **Actions et rubriques de ce menu** → **Personnalisation du profil**. Les joueurs importent directement un portrait et une bannière via les formulaires de fichiers Discord, puis écrivent un titre/devise (40 caractères) et une histoire (600 caractères). Formats fixes PNG, JPG et WebP, jusqu’à 5 Mo, de 32 à 4096 pixels par côté et 16 millions de pixels maximum. Le portrait est recadré en carré ; la bannière au format 4:1. Les textes existants sont préremplis et la liste propose le retrait des éléments déjà personnalisés.
+## Collection et social
 
-Le portrait apparaît dans le coin supérieur droit des menus, des erreurs et des annonces. Sur le profil d’un autre personnage, son portrait est utilisé. La bannière habille les pages de profil et de personnalisation. Les réponses mentionnent seulement le joueur à l’origine de l’action ; les mentions saisies dans une description ne déclenchent aucune notification. Les messages ordinaires du salon ne déclenchent pas de réponse automatique.
+Depuis une carte : favoris, souhaits, fiche AniList après découverte, album, vente, recyclage ou échange. **La dernière copie d’une favorite est protégée** contre les ventes, échanges et recyclages. Le recyclage groupé ne prend que les doublons communs, peu communs ou rares, et conserve toujours une copie. Les rangs supérieurs se recyclent individuellement, après confirmation.
 
-Le bestiaire possède 51 portraits originaux embarqués : 36 ennemis, 12 gardiens et 3 boss de raid. Les élites reprennent le portrait de leur ennemi. Le portrait adverse apparaît dans la fiche de combat, tandis que celui du joueur reste dans l’en-tête. Un portrait d’aventurier est fourni par défaut.
+Un échange se propose en choisissant sa carte, un joueur Discord, puis une carte dans sa collection. L’offre est réservée pendant **24 heures** ; le destinataire la consulte dans **Social**, puis accepte ou refuse après vérification. Les transferts sont simultanés. Refus, annulation et expiration restituent les cartes offertes. Il n’y a ni DM automatique ni transfert sans consentement.
 
-Les images importées sont téléchargées une seule fois depuis les pièces jointes Discord, vérifiées, redimensionnées puis sauvegardées dans PostgreSQL. Elles restent disponibles même si le lien Discord expire ou si Railway redéploie le bot ; aucun volume supplémentaire ni nouvelle variable d’environnement n’est nécessaire. Un [message de mise à jour pour la communauté](docs/annonces/personnalisation-profils.txt) est prêt à copier.
+Marché global : lots entiers, prix par carte affiché avec total, **commission vendeur de 5 % arrondie au supérieur**, **10 annonces actives** par joueur, expiration après **7 jours**, annulation et restitution des invendus. Les cartes en vente sont réservées et ne peuvent plus servir ailleurs. Le blocage coupe la consultation des profils et les nouvelles transactions entre les deux joueurs ; il n’empêche pas d’annuler une offre en cours.
 
-![Exemple du panneau de personnage](docs/images/profil.png)
+Nom et description personnalisables ; import direct d’un portrait et d’une bannière depuis les formulaires Discord (PNG/JPG/WebP fixes, 5 Mo maximum). Les images normalisées sont conservées en PostgreSQL. Le téléchargement est limité aux pièces jointes Discord, borné en taille et durée, sans redirection.
 
-## Ce qui est jouable
+## Tester et héberger
 
-- **16 peuples et 18 classes**, soit 288 combinaisons. Chaque race a ses bonus et son bâtiment exclusif ; chaque classe a sa compétence active.
-- **12 régions**, 36 ennemis ordinaires, des élites, 12 gardiens et une histoire de campagne. Combats au tour par tour avec frappe lourde annoncée, garde, mana, potions et fuite.
-- **Un sac d’expédition exposé** : poursuivre l’aventure avec les PV restants ou rentrer sécuriser le butin. La défaite coûte la moitié de l’or et des matériaux du sac, ainsi que ses équipements. Le coffre et les objets portés restent protégés.
-- **3 emplacements de bâtiments**, 9 constructions communes et 16 héritages raciaux. Améliorations jusqu’au niveau 5, production hors ligne, repos et bonus passifs.
-- **Marché entre joueurs** : lots sous séquestre, achats atomiques, commission de 5 %, expiration après sept jours et annulation. Un marchand fournit aussi les consommables et matériaux courants.
-- Artisanat, équipement de cinq raretés, enchantements garantis jusqu’à +5, recyclage et talents permanents.
-- Guildes de 30 membres, trésor commun, dons, recrutement par menus, groupes de 2–4 amis et trois raids coopératifs avec récompenses individuelles.
-- Demandes d’amis réciproques, réception des invitations, annuaire, profils publics sans coffre, blocage, duels acceptés et classement de la lice.
-- Cité de guilde avec remparts, caserne, hospice et phare ; réserves communes, gardes, invasions quotidiennes coopératives et sièges volontaires entre guildes.
-- Provisions et contrats quotidiens, séries de connexion, événements mondiaux et classement.
-
-Les « métiers » du codex décrivent les activités accessibles à tous : alchimie, forge, enchantement et récolte/recyclage. Ils ne constituent pas une seconde classe à choisir.
-
-## Faire évoluer et personnaliser son héros
-
-Depuis le profil privé, la liste **Actions et rubriques de ce menu** donne accès à **Spécialisations**, **Mes exploits** et **Changer de classe ou de race**.
-
-- Le **Cristal de vocation** coûte 750 or chez le marchand ; il change la classe au refuge, rembourse les talents dépensés et efface le choix de spécialisation. Le **Sceau du renouveau**, à 1000 or, change la race. Niveau, campagne, coffre et objets sont conservés. Les bâtiments exclusifs de l’ancien peuple restent construits mais inactifs ; aucune production n’est accumulée durant leur inactivité. Les jauges gardent leur proportion.
-- Chaque classe possède **trois spécialisations**, soit 54 voies, accessibles au niveau 5 au refuge. Le premier choix est gratuit ; changer ensuite coûte 300 or. Compétence, bonus et effets persistants sont pris en compte en campagne, en duel et en raid. Le nécromancien choisit entre légions invoquées, drain renforcé et malédictions.
-- Les 36 ennemis ont des profils et comportements distincts : rapidité, armure, régénération, poison, vol du sac, absorption de mana… Leurs particularités sont affichées avant le choix et en combat. Le pillard ne touche jamais au coffre et restitue l’or volé s’il est vaincu ; la garde prévient le vol. La potion dissipe le poison.
-- Neuf exploits donnent des **titres, cadres et décorations** visibles sur les profils publics et les menus. Ils récompensent victoires, bestiaire, raids, duels, défense de cité et sauvetage d’un allié en raid. Ce dernier exige un soin qui fait repasser un allié vivant de 25 % des PV ou moins à plus de 25 %, une fois par allié et par tentative. Les récompenses ne modifient aucune statistique. Les anciens compteurs donnent les exploits correspondants ; les découvertes de bestiaire sont recensées à partir de cette mise à jour.
-- Dans le coffre, une silhouette de la race est entourée des trois vrais emplacements : **arme, armure et talisman**. Chaque équipement possède une icône et son nom. Choisis un objet dans la liste, puis Équiper ou Déséquiper : la silhouette se met à jour. **Personnalisation du profil → Changer mon avatar d’équipement** importe une image indépendante du portrait et de la bannière ; **Avatar de ma race** rétablit la silhouette d’origine.
-
-![Inventaire avec silhouette et équipements](docs/images/inventaire-silhouette.png)
-
-**Administration :** `/admin-reset joueur:@joueur` ouvre une confirmation privée valable cinq minutes. La permission Discord Administrateur est exigée à l’ouverture et à la confirmation, uniquement dans le serveur principal défini par `DISCORD_GUILD_ID`. Sans cette variable, le reset est refusé. Le reset efface le personnage, ses annonces et ses images, retire ses liens et transfère les directions de guilde/groupe ; les groupes vides sont dissous. Les biens des autres joueurs et leurs blocages sont préservés. Chaque reset laisse une trace `admin_audit` en base. Cette commande s’ajoute aux quatre commandes des joueurs.
-
-## Jouer ensemble
-
-Dans **Social → Voir les profils**, consulte un personnage pour demander son amitié, offrir un cadeau, proposer un duel ou l’inviter dans ta guilde si tu en as le droit. Le destinataire répond dans **Réception**. Les demandes d’amis et invitations durent sept jours ; un défi dure quinze minutes. Les listes d’amis sont limitées à 100, les demandes envoyées à 10 et les défis en attente à 3. Le blocage coupe les interactions directes dans les deux sens. Aucun message privé automatique n’est envoyé.
-
-Les **duels d’entraînement** nécessitent l’accord de l’adversaire et deux personnages au refuge. La simulation utilise vos équipements, à pleine vie et plein mana, en alternant le premier joueur. Après 40 tours sans vainqueur : égalité. Vos PV, mana, énergie, objets, or et XP réels ne changent pas ; seuls les résultats du classement sont enregistrés. Une minute de récupération sépare deux duels.
-
-Le chef de guilde peut nommer des **officiers**, rétrograder ou exclure des membres. Les officiers peuvent inviter, publier le message de guilde, améliorer les constructions de la cité et engager des sièges. Seul le chef peut activer ou désactiver les sièges et améliorer le niveau général de la guilde.
-
-### Défendre et développer la cité
-
-1. Fonder ou rejoindre une guilde, puis ouvrir **Social → Notre cité**.
-2. Donner de l’or au trésor et des matériaux à la réserve commune. Le chef et les officiers choisissent les constructions à améliorer, jusqu’au niveau 5.
-3. Monter la garde : 10 énergie pour renforcer la défense de siège pendant 24 heures, selon les statistiques de ton héros. Tu peux continuer tes autres aventures.
-4. Repousser l’invasion du jour avec au moins deux membres dans la guilde : chacun dispose de trois sorties, espacées de cinq minutes. Une sortie coûte 10 énergie et 10 % des PV maximum, et exige au moins 50 % de vie au refuge.
-5. Choisir **Assaut**, **Bastion** ou **Soutien** selon ses statistiques et les constructions de la cité. Les contributions se cumulent contre la même menace. Une fois l’invasion vaincue, seuls les participants peuvent réclamer la récompense, une fois par jour toutes guildes confondues.
-
-Les défenses réussies donnent or, expérience, matériaux et honneur aux participants, ainsi que du prestige et de l’or au trésor. Les invasions changent à minuit UTC. Un joueur quittant la guilde perd sa contribution de garde ; les dons restent au trésor.
-
-Les **sièges entre guildes sont volontaires** : les deux chefs doivent avoir activé cette participation. L’écart de niveau général des guildes ne peut pas dépasser deux. Un chef ou officier peut engager 120 or du trésor et 15 de sa propre énergie. Une attaque toutes les six heures ; la cité défendue reçoit six heures de protection. Les coffres ne sont pas pillés, les bâtiments restent debout et l’intégrité ne descend pas sous 25 %. Elle se répare progressivement, avec l’aide de l’hospice. Les victoires donnent du prestige.
-
-## Une campagne à préparer
-
-Depuis **Profil → Aventure → Choisir un ennemi**, choisis une créature normale ou sa variante élite et l’un des deux modes : **Avancer en campagne** compte pour le gardien ; **Chasser sans avancer** rapporte XP, or et ressources sans modifier ce compteur. Chaque combat coûte 5 énergie. Après **deux victoires de progression**, le gardien devient un choix supplémentaire : il ne s’impose plus. Le bouton **Chasser le même ennemi** permet de répéter la dernière chasse. Les statistiques dépendent de la région et ne s’adaptent pas au niveau du héros : revenir mieux équipé rend réellement la route plus accessible. Les ennemis choisis ne sont remplacés ni par une cache ni par une élite aléatoire.
-
-La **Carte** dessine les douze étapes reliées par un chemin, les gardiens vaincus et les repères des joueurs (toi et cinq autres par page). L’étape indique la route la plus avancée débloquée ; la région actuelle est affichée séparément, pour distinguer progression et retour en chasse. Les profils bloqués sont exclus. Entre deux combats, tu peux voyager vers toute région débloquée dont tu as le niveau, en gardant ton sac exposé. Seul le retour au refuge le sécurise. La chasse conserve le compteur du gardien même en cas de fuite ou de défaite ; les pertes de butin habituelles s’appliquent. La progression conserve ses règles de repli habituelles.
-
-Avant le premier départ, fabrique la **Protection du voyageur** à l’atelier : 35 or, 4 fers, 4 cuirs et 6 bois. Construis une caserne pour la mêlée ou une tour des arcanes pour la magie ; les remparts aident à encaisser. En combat, protège-toi contre les frappes lourdes, surveille le mana et prévois des potions. Une élite ou un gardien peut nécessiter un repli et davantage d’améliorations.
-
-Les soins et vols de vie sont appliqués **avant la riposte**, avec un plafond égal aux PV maximaux. Le journal affiche le soin effectivement reçu, le plafond éventuel, les dégâts de la riposte et les PV avant/après le tour. Exemple : **46 PV soignés puis 21 dégâts donnent +25 PV nets** sur la jauge. Le drain magique rend 45 % des dégâts et le drain physique 35 %, avant bonus de soins, en campagne comme en duel. Le dernier journal reste visible lorsqu’on rouvre un combat en cours.
-
-## Tester dans Visual Studio Code
-
-Node.js **22.12+**, 24 recommandé. Dans **Terminal → Nouveau terminal**, à la racine du projet :
+Node.js **22.12+**, recommandé **24**. Dépendances verrouillées par `package-lock.json`.
 
 ```powershell
 npm.cmd ci
-```
-
-Créer `.env` à partir de `.env.example` si nécessaire, puis remplir :
-
-```dotenv
-DISCORD_TOKEN=TON_TOKEN_DE_BOT
-DISCORD_CLIENT_ID=TON_APPLICATION_ID
-DISCORD_GUILD_ID=ID_DE_TON_SERVEUR_DE_TEST
-REGISTER_COMMANDS=true
-DEMO_MODE=true
-NODE_ENV=development
-PORT=3000
-```
-
-Le token se génère dans [Discord Developer Portal](https://discord.com/developers/applications) → application → **Bot**. L’Application ID est dans **General Information**. Pour copier l’ID du serveur, activer le Mode développeur dans Discord → Paramètres → Avancés, puis clic droit sur le serveur → Copier l’identifiant.
-
-Inviter le bot avec les scopes **bot** et **applications.commands**, et les permissions **View Channels**, **Send Messages**, **Embed Links** et **Attach Files**. Aucun intent privilégié n’est nécessaire. L’URL d’interactions HTTP reste vide : le bot utilise la connexion Gateway.
-
-```powershell
 npm.cmd start
 ```
 
-Attendre **« 5 commandes enregistrées »** puis **« Brumeterre est ouverte »**. Les joueurs gardent leurs quatre commandes ; la cinquième est réservée à l’administration. Dans Discord, ouvrir **`/profil`**, cliquer sur **Créer mon aventurier**, choisir sa race et sa classe, puis saisir son nom. Tout le parcours suivant passe par les boutons et les menus.
+Variables `.env` locales ou Railway :
 
-**Le mode démo est en mémoire : les personnages disparaissent à l’arrêt du bot.** Il est interdit en production. Pour conserver les parties en local, démarrer PostgreSQL avec Docker :
-
-```powershell
-docker compose up -d
+```dotenv
+DISCORD_TOKEN=TOKEN_DU_BOT
+DISCORD_CLIENT_ID=APPLICATION_ID
+DISCORD_GUILD_ID=SERVEUR_PRINCIPAL
+DATABASE_URL=URL_POSTGRESQL
+DEMO_MODE=false
+REGISTER_COMMANDS=true
+PORT=3000
 ```
 
-Puis mettre `DEMO_MODE=false` et `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/terre_des_noobs` dans `.env`.
+`DEMO_MODE=true` permet un essai local sans PostgreSQL, mais **toutes les collections de démo sont perdues au redémarrage**. Ce mode est interdit sur Railway/en production. Ne publie jamais le `.env`.
 
-## Déployer sur Railway avec GitHub
+Railway : le Dockerfile et `railway.json` existants restent utilisés. **Aucune nouvelle variable, API ou volume n’est nécessaire.** La base PostgreSQL existante convient. Le démarrage enregistre automatiquement les **7 commandes** si `REGISTER_COMMANDS=true`. Le service doit suivre `main`, avec les déploiements automatiques activés. Voir [le guide Railway](docs/RAILWAY.md).
 
-Le [guide Railway pas à pas](docs/RAILWAY.md) décrit la création des deux services, le passage du local au cloud et les erreurs courantes. Le fichier [railway.variables.example](railway.variables.example) contient les variables à copier dans le **Raw Editor** du service bot.
+`/admin-reset joueur:@ami` reste réservé aux **administrateurs du serveur principal** `DISCORD_GUILD_ID`, avec confirmation de cinq minutes et vérification des permissions au clic final. Il efface seulement la collection gacha du joueur, retire ses ventes, ferme ses échanges en rendant leurs cartes aux autres joueurs et nettoie ses amitiés et images. La génération du profil empêche une ancienne confirmation de supprimer un profil recréé. Une trace d’administration est enregistrée.
 
-Dépôt : [WindowsVistaLiam/Terre-des-Noobs](https://github.com/WindowsVistaLiam/Terre-des-Noobs).
+## Passage du RPG au gacha
 
-1. Créer un projet Railway et ajouter un service **PostgreSQL**.
-2. Ajouter un service depuis ce dépôt GitHub, branche `main`.
-3. Configurer les variables du service bot :
+Le point d’entrée utilise désormais exclusivement `GachaGame` et ses interactions. **Les anciens boutons RPG sont refusés** avec une invitation à ouvrir `/profil`. Les anciens documents `player`, guildes et inventaires restent conservés dans la base : aucune progression RPG n’est effacée et aucun or RPG n’est converti. À la première visite uniquement, le nom, la description, le portrait et la bannière peuvent être repris ; les données gacha vivent dans des documents `gacha_*` distincts.
 
-| Variable            | Valeur                                                                         |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `DISCORD_TOKEN`     | Token secret du bot                                                            |
-| `DISCORD_CLIENT_ID` | Application ID numérique                                                       |
-| `DATABASE_URL`      | Référence Railway au service de base, par exemple `${{Postgres.DATABASE_URL}}` |
-| `REGISTER_COMMANDS` | `true`                                                                         |
-| `NODE_ENV`          | `production`                                                                   |
-| `DEMO_MODE`         | `false`                                                                        |
-| `DISCORD_GUILD_ID`  | Facultatif : ID du serveur si les commandes restent limitées à celui-ci        |
+Le moteur RPG, ses commandes, ses illustrations, ses tests et ses anciens tutoriels ont été retirés du dépôt. Seul le gacha et son infrastructure restent dans cette version ; les anciennes révisions restent accessibles dans l’historique Git.
 
-Le nom `Postgres` de la référence doit correspondre au service PostgreSQL réel. Railway fournit `PORT`. Le fichier `railway.json` impose une réplique, désactive la mise en veille, configure le redémarrage et utilise `/health` pour le contrôle de disponibilité. Un domaine public n’est pas nécessaire au bot.
-
-Le Dockerfile embarque Canvas, les polices et les quatre décors. Aucun téléchargement d’images, d’avatars ou de polices n’est nécessaire au rendu en production. Aucune clé d’API d’IA n’est requise.
-
-Les sauvegardes restent dans PostgreSQL lors des redéploiements. Activer les sauvegardes de la base dans Railway selon son offre. Les pushes sur `main` déclenchent les mises à jour lorsque le dépôt est lié ; activer **Wait for CI** pour attendre les vérifications GitHub Actions.
-
-Références : [déploiements GitHub Railway](https://docs.railway.com/deployments/github-autodeploys), [PostgreSQL Railway](https://docs.railway.com/databases/postgresql), [healthchecks](https://docs.railway.com/deployments/healthchecks).
-
-## Mettre à jour les menus
-
-1. Mettre le code à jour et lancer `npm ci`.
-2. Vérifier la permission **Attach Files** du bot dans le salon de jeu.
-3. Redémarrer le bot. L’enregistrement remplace automatiquement les anciennes commandes par les quatre nouvelles dans le même périmètre.
-4. Rouvrir `/profil`, `/social`, `/marché` ou `/info`. Les nouveaux champs sociaux et la cité sont initialisés automatiquement sur les sauvegardes existantes ; aucun personnage n’est recréé.
-
-Si `REGISTER_COMMANDS=false`, exécuter `npm run register` pour forcer la mise à jour. Avec `DISCORD_GUILD_ID`, les commandes sont propres à ce serveur ; sans cette variable, elles sont globales. Un changement de périmètre ne supprime pas les commandes laissées dans l’autre périmètre.
-
-## Développement et vérification
+## Vérifier les changements
 
 ```powershell
-npm run dev       # Recharge le bot après changement de code
-npm run check     # Vérifie la syntaxe JavaScript
-npm test          # Jeu, menus, formulaires, images Canvas et disponibilité HTTP
-npm run preview   # Génère 24 vrais panneaux dans .local/previews, sans token
-npm run register  # Réenregistre les quatre commandes Discord
+npm.cmd run check
+npm.cmd test
+npm.cmd run preview:gacha
 ```
 
-Le test d’intégration PostgreSQL s’active avec `TEST_DATABASE_URL`. Il crée un schéma temporaire isolé, utilise deux pools pour les achats concurrents, vérifie le rollback et la persistance après reconnexion, puis supprime uniquement son schéma. Les tests Canvas génèrent et décodent les PNG, contrôlent leurs dimensions et poids et vérifient que les cartes restent à l’intérieur de l’image. Les parcours simulent boutons, listes, formulaires et commandes sans envoyer de messages dans un salon réel.
+Les aperçus locaux sont écrits dans `.local/gacha-previews/`. Pour les tests de persistance et de concurrence PostgreSQL, définir **une base de test** dans `TEST_DATABASE_URL` ; chaque test crée puis supprime son propre schéma isolé. Ne pas utiliser la base Railway de production comme banc de test.
 
-GitHub Actions exécute les tests sur Linux contre PostgreSQL 17, construit le Dockerfile et vérifie le rendu Canvas dans l’image de production.
+La CI exécute les tests avec PostgreSQL et vérifie les rendus Canvas dans l’image Docker de production, sans connexion à Discord. [Aperçus et annonce](docs/GACHA.md).
 
-## Organisation du code
+## Catalogue et ressources
 
-- `src/content.js` : univers, bonus, bâtiments, recettes et marchand.
-- `src/game.js` : règles, progression et transactions.
-- `src/commands.js` : quatre commandes, identifiants de navigation et formulaires.
-- `src/social-game.js` : amitiés, invitations, duels, cité, invasions et sièges atomiques.
-- `src/social-content.js` et `src/social-views.js` : couleurs des races, règles de cité et menus sociaux.
-- `src/controller.js` : interactions Discord, validation et parcours des menus.
-- `src/views.js` : contenu des écrans et contrôles natifs.
-- `src/canvas.js` : rendu graphique et mise en page mesurée.
-- `src/assets/` : décor original et polices embarquées avec leurs licences.
-- `src/store.js` : sauvegarde PostgreSQL et mode mémoire réservé aux essais.
+Le catalogue est versionné avec les atlas WebP dans `src/assets/gacha/` (environ 36 Mo). Au maximum douze atlas sont gardés dans le cache de rendu. Pas de récupération de portraits à la demande et pas de clé API nécessaire.
 
-Voir [l’architecture](docs/ARCHITECTURE.md) et [les ressources graphiques](docs/ART.md). Cette version cible une communauté d’amis ; l’équilibrage avancé reste à affiner avec les retours de vraies parties.
+`npm run catalog:import` reconstruit le catalogue depuis l’API publique AniList et conserve les identifiants et raretés existants. Il utilise un cache de développement dans `.local/gacha-import/`, respecte les réponses de limitation de débit et normalise les portraits en 160 × 220. L’import de construction ne s’exécute **jamais** au démarrage Railway. Les noms et portraits proviennent d’AniList ; chaque carte possède sa source. Les illustrations restent celles de leurs ayants droit ; aucun asset ni compte privé de Kyara n’est importé. Détails dans [GACHA.md](docs/GACHA.md).
