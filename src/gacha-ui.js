@@ -1,5 +1,6 @@
 import { CARDS, RARITIES, SERIES_CARDS, SETTINGS, THEMES, packName } from './gacha-catalog.js';
 import { drawGacha } from './gacha-canvas.js';
+import { rarePull, animateRarePull } from './gacha-animation.js';
 export const gid = (owner, op, ...args) => {
   const result = ['ga', owner, op, ...args].join(':');
   if (result.length > 100) throw new Error('Discord custom ID exceeds 100 characters');
@@ -99,10 +100,15 @@ export function gachaComponents(d, owner) {
   if (rows.length > 5) throw new Error(`Too many Discord rows for ${v}: ${rows.length}`);
   return rows;
 }
-export async function renderGacha(data, owner) {
+export async function renderGacha(data, owner, { animationEncoder = animateRarePull } = {}) {
   const canvas = await drawGacha(data);
+  let media = { buffer: canvas.buffer, name: 'manga-club.png' };
+  if (rarePull(data)) {
+    try { media = await animationEncoder(canvas, data) ?? media; }
+    catch { console.warn('Animation indisponible : résultat du tirage conservé en PNG.'); }
+  }
   const mention = /^\d{17,20}$/.test(owner) ? `<@${owner}>` : data.p?.name ?? 'Collectionneur';
   const description = [`Manga Club — ${data.view}`, data.message, ...(data.cards ?? []).map(c => `${c.name} : ${RARITIES[c.rarity].name}`), ...(data.pulls ?? []).map(c => CARDS.get(c.cardId).name)].filter(Boolean).join('. ').slice(0, 1024);
   const context = data.view === 'trade' ? ` · Échange entre <@${data.trade.from}> et <@${data.trade.to}>` : data.view === 'profile' && data.target.id !== owner ? ` · Profil de <@${data.target.id}>` : data.view === 'listing' ? ` · Annonce de <@${data.listing.sellerId}>` : '';
-  return { content: mention + context, allowedMentions: { parse: [], users: /^\d{17,20}$/.test(owner) ? [owner] : [], repliedUser: false }, files: [{ attachment: canvas.buffer, name: 'manga-club.png', description }], attachments: [], components: gachaComponents(data, owner) };
+  return { content: mention + context, allowedMentions: { parse: [], users: /^\d{17,20}$/.test(owner) ? [owner] : [], repliedUser: false }, files: [{ attachment: media.buffer, name: media.name, description }], attachments: [], components: gachaComponents(data, owner) };
 }

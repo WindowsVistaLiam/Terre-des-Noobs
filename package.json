@@ -15,12 +15,17 @@
     "test": "node --test",
     "preview": "node scripts/preview-gacha.js",
     "preview:gacha": "node scripts/preview-gacha.js",
+    "preview:animations": "node scripts/preview-animations.js",
     "catalog:import": "node scripts/import-gacha.js",
     "test:postgres": "node --env-file-if-exists=.env --test test/gacha-postgres.test.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.11",
     "discord.js": "14.27.0",
+    "gifenc": "1.0.3",
     "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "omggif": "1.0.10"
   }
 }

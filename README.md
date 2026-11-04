@@ -25,6 +25,7 @@ Les profils, le marché, le guide et **les résultats d’ouverture** sont publi
 - Départ : **300 éclats, 10 boosters rechargeables et 5 boosters de bienvenue**.
 - **1 booster gratuit toutes les 10 minutes**, jusqu’à **10** en réserve rechargeable. Les boosters offerts sont stockés séparément, sans expiration. Les rechargeables sont utilisés en premier ; le temps passé au plafond ne crée pas de recharge cachée.
 - **5 cartes par booster**, ouverture par 1 ou par 5. Chaque carte possède une rareté fixe, une puissance et une aura de collection. Il n’y a plus de combat RPG.
+- **Animations de tirage** : mythique rose/violette avec orbites et particules ; légendaire dorée avec rayons et couronne. Le GIF Canvas se joue une fois (environ quatre secondes), conserve toutes les cartes visibles et se termine sur le résultat complet. Si les deux raretés tombent ensemble, le légendaire donne l’ambiance principale ; les hauts rangs gardent leur couleur. L’animation s’applique aussi aux doublons. La lecture dépend des préférences d’animation du client Discord.
 - **Mix multivers**, **sélection du jour**, et **boosters par univers** : la liste propose les principaux univers, et chaque album d’au moins six personnages donne accès à son propre booster. Les deux monnaies d’ouverture fonctionnent pour chacun.
 - Booster contre **150 éclats**, avec confirmation. Les éclats se gagnent uniquement en jouant : quotidien, missions, albums, recyclage et marché. Aucun paiement réel.
 - Quotidien : **3 boosters et 100 éclats**, plus 10 éclats par jour consécutif supplémentaire, plafonné à 160. Renouvellement à **minuit UTC** (01 h en hiver / 02 h en été en France).
@@ -93,9 +94,10 @@ Le moteur RPG, ses commandes, ses illustrations, ses tests et ses anciens tutori
 npm.cmd run check
 npm.cmd test
 npm.cmd run preview:gacha
+npm.cmd run preview:animations
 ```
 
-Les aperçus locaux sont écrits dans `.local/gacha-previews/`. Pour les tests de persistance et de concurrence PostgreSQL, définir **une base de test** dans `TEST_DATABASE_URL` ; chaque test crée puis supprime son propre schéma isolé. Ne pas utiliser la base Railway de production comme banc de test.
+Les aperçus locaux sont écrits dans `.local/gacha-previews/` ; les deux GIFs et leurs images de contrôle dans `.local/gacha-animations/`. Pour les tests de persistance et de concurrence PostgreSQL, définir **une base de test** dans `TEST_DATABASE_URL` ; chaque test crée puis supprime son propre schéma isolé. Ne pas utiliser la base Railway de production comme banc de test.
 
 La CI exécute les tests avec PostgreSQL et vérifie les rendus Canvas dans l’image Docker de production, sans connexion à Discord. [Aperçus et annonce](docs/GACHA.md).
 

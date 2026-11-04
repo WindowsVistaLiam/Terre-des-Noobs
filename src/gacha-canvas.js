@@ -1,6 +1,7 @@
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import { fileURLToPath } from 'node:url';
 import { CARDS, SERIES, SERIES_CARDS, CATALOG, RARITIES, SETTINGS, normalizedRates, poolFor, packName } from './gacha-catalog.js';
+import { rarePull } from './gacha-animation.js';
 GlobalFonts.registerFromPath(fileURLToPath(new URL('./assets/fonts/Lato-Regular.ttf', import.meta.url)), 'Gacha');
 const cache = new Map();
 const W = 1280, M = 48;
@@ -82,7 +83,8 @@ async function picture(ctx, media, x, y, w, h, circle = false) {
 }
 const TITLES = { profile: 'Ton monde en cartes', packs: 'La salle des boosters', pull: 'Le destin a choisi', collection: 'Ta collection', catalog: 'Le grand catalogue', albums: 'Les univers', album: 'Album de collection', wishlist: 'Tes personnages recherchés', card: 'Une carte, une histoire', market: 'Le marché des collectionneurs', listing: 'Une nouvelle pièce de collection', social: 'Collectionner ensemble', trade: 'Échange entre collectionneurs', missions: 'Le carnet des défis', leaderboard: 'Le cercle des collectionneurs', info: 'Le guide du gacha', confirm: 'Avant de confirmer', customize: 'Ton identité de collectionneur', error: 'Un petit contretemps' };
 export async function drawGacha(data) {
-  const v = data.view, p = data.p, accent = ['market', 'listing'].includes(v) ? '#47d6a1' : ['social', 'trade'].includes(v) ? '#b68cff' : ['catalog', 'info', 'albums', 'album'].includes(v) ? '#62aaff' : C.gold;
+  const celebration = rarePull(data);
+  const v = data.view, p = data.p, accent = celebration?.color ?? (['market', 'listing'].includes(v) ? '#47d6a1' : ['social', 'trade'].includes(v) ? '#b68cff' : ['catalog', 'info', 'albums', 'album'].includes(v) ? '#62aaff' : C.gold);
   let h = 940;
   if (v === 'profile') h = data.appearance?.banner ? 1240 : 1050;
   if (['collection', 'catalog', 'album', 'wishlist', 'market', 'tradeChoose'].includes(v)) h = 1110;
@@ -97,7 +99,7 @@ export async function drawGacha(data) {
   for (let i = -3; i < 10; i++) { ctx.beginPath(); ctx.moveTo(i * 190, 0); ctx.lineTo(i * 190 + 400, h); ctx.stroke(); }
   for (let i = 0; i < 65; i++) { ctx.fillStyle = `${accent}${i % 3 ? '25' : '70'}`; ctx.fillRect((i * 197 + 13) % W, (i * 353 + 23) % h, 2, 2); }
   txt(ctx, 'TERRE DES NOOBS  /  MANGA CLUB', M, 31, 900, 16, accent, 1);
-  txt(ctx, TITLES[v] ?? TITLES.profile, M, 70, 1050, 42, C.paper, 2);
+  txt(ctx, celebration?.title ?? TITLES[v] ?? TITLES.profile, M, 70, 1050, 42, celebration?.color ?? C.paper, 2);
   const person = v === 'profile' ? data.target : p;
   const portrait = await picture(ctx, data.appearance?.portrait, 1132, 45, 94, 94, true);
   if (!portrait) {

@@ -18,13 +18,18 @@ L’annonce prête à copier est dans [annonces/gacha.txt](annonces/gacha.txt).
 - `gacha-catalog.js` : catalogue statique, sources, six raretés, taux, prix, garanties et sélection des boosters.
 - `gacha-game.js` : logique transactionnelle et vues de jeu. Documents `gacha_player`, `gacha_listing`, `gacha_trade`, `gacha_friend`, `gacha_confirm`, `gacha_receipt`, `gacha_search`, `gacha_import`, `gacha_media`.
 - `gacha-controller.js` : sept commandes, contrôle d’identité, formulaires, visibilité, anti-double-clic et gestion des délais Discord. Les anciens identifiants `tdn`/`tdnp` sont refusés.
-- `gacha-ui.js` : contrôles Discord, listes, boutons, navigation et pièces jointes PNG.
+- `gacha-ui.js` : contrôles Discord, listes, boutons, navigation et pièces jointes PNG/GIF.
 - `gacha-canvas.js` : composition graphique d’origine, cartes et portraits, bannière, vitrine et atlas WebP, avec cache limité à douze atlas.
+- `gacha-animation.js` / `gacha-animation-worker.js` : détection des hauts rangs et encodage GIF dans un worker. Mythique : orbites roses/violettes ; légendaire : couronne et rayons dorés. Priorité au légendaire pour l’ambiance lorsqu’un tirage contient les deux. Jusqu’à cinq cartes sont mises en mouvement dans une même animation ; toutes les cartes du tirage restent affichées.
 - `gacha-admin.js` : préparation et confirmation de reset, génération du profil, nettoyage des liens et audit. Les autorisations de serveur et d’administrateur sont contrôlées par le handler avant chaque appel ; ce module n’est jamais accessible au dispatch du jeu.
 
 Une transaction PostgreSQL et le verrou consultatif partagé existant couvrent chaque dépense ou transfert. Les cartes en vente et celles proposées en échange sont retirées de l’inventaire et réservées dans le document correspondant. Elles reviennent exactement une fois à l’annulation, au refus ou à l’expiration. L’expiration est vérifiée avant les actions et dans le nettoyage périodique.
 
 Les identifiants d’interactions Discord servent de reçus idempotents, conservés sept jours. Un replay réaffiche le résultat sans tirer d’autres cartes ni prélever un second coût. Les confirmations expirent après cinq minutes et revérifient état, quantité, prix, favoris, génération et destinataire. Les recherches privées expirent après une heure ; les demandes d’amis après sept jours. L’historique des échanges clos est conservé trente jours.
+
+Les animations ne modifient jamais les cartes, compteurs de garantie ou paiements : elles interviennent après validation de la transaction. Elles sont encodées avec [gifenc](https://github.com/mattdesl/gifenc) (MIT), localement, sans FFmpeg ni service externe. Le GIF contient 32 images et dure 4,14 secondes, en lecture unique, à 960 pixels de large maximum. La première et la dernière image montrent le résultat complet ; les images intermédiaires utilisent la transparence pour conserver les cartes qui ne bougent pas. Un seul worker encode à la fois, la file est bornée à huit travaux, et un encodage est interrompu après douze secondes. Au-delà de 8 Mo, en cas de saturation ou d’erreur, le PNG complet est envoyé. La lecture automatique respecte les préférences Discord.
+
+Les tests décodent réellement les GIFs avec `omggif` (dépendance de développement), vérifient le mouvement, la conservation des cartes, l’image finale et la taille, ainsi que l’ouverture de 25 cartes. La CI teste les deux workers dans le conteneur de production, sans dépendances de développement.
 
 Les joueurs, marchés et relations sont globaux entre les serveurs du même bot, comme dans la version précédente. Le bot est destiné à une communauté : le verrou global et les listes de documents conviennent à cette échelle. Il ne s’agit pas d’une architecture pour des centaines de milliers de joueurs simultanés.
 

@@ -42,3 +42,18 @@ jobs:
           const pull = await renderGacha(await game.execute('open','111111111111111111',{pack:'mix',count:5}),'111111111111111111');
           if (pull.files[0].attachment.length > 8000000) process.exit(1);
           console.log('25 character portraits:',pull.files[0].attachment.length,'bytes');"
+      - name: Verify mythic and legendary GIF workers in production image
+        run: >-
+          docker run --rm terre-des-noobs:ci node --input-type=module -e
+          "import {createGachaPreviewGame} from './scripts/preview-gacha.js';
+          import {renderGacha} from './src/gacha-ui.js';
+          import {CATALOG} from './src/gacha-catalog.js';
+          const game=await createGachaPreviewGame();
+          const data=await game.execute('open','111111111111111111',{pack:'mix'});
+          for(const rarity of [4,5]) {
+          const card=CATALOG.cards.find(c=>c.rarity===rarity);
+          const d={...data,pulls:data.pulls.map((p,i)=>i===2?{cardId:card.id,fresh:true}:p)};
+          const panel=await renderGacha(d,'111111111111111111');
+          const f=panel.files[0];
+          if(!f.name.endsWith('.gif')||f.attachment.toString('ascii',0,6)!=='GIF89a'||f.attachment.length>8000000)process.exit(1);
+          console.log(rarity,f.name,f.attachment.length,'bytes');}"

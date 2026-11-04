@@ -32,7 +32,7 @@ export async function createGachaPreviewGame() {
 export async function previewGacha(directory = new URL('../.local/gacha-previews/', import.meta.url)) {
   await mkdir(directory, { recursive: true });
   const game = await createGachaPreviewGame();
-  const out = async (name, data) => { const panel = await renderGacha(data, A); await writeFile(new URL(`${name}.png`, directory), panel.files[0].attachment); console.log(`${name}: ${panel.files[0].attachment.length} bytes, ${panel.components.length} rows`); };
+  const out = async (name, data) => { const panel = await renderGacha(data, A); const ext = panel.files[0].name.split('.').at(-1); await writeFile(new URL(`${name}.${ext}`, directory), panel.files[0].attachment); console.log(`${name}: ${panel.files[0].attachment.length} bytes, ${panel.components.length} rows`); };
   for (const view of ['profile', 'packs', 'collection', 'catalog', 'albums', 'wishlist', 'social', 'missions', 'leaderboard', 'info', 'customize']) await out(view, await game.execute('view', A, { view }));
   const c = CATALOG.cards.find(c => c.name.includes('Luffy')) ?? CATALOG.cards[0];
   await out('card', await game.execute('view', A, { view: 'card', cardId: c.id }));
