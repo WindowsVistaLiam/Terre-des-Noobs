@@ -165,7 +165,7 @@ test('Gacha : découvertes permanentes, albums et récompenses à usage unique',
   await s.game.execute('open', A, { pack: 'mix' }); await s.game.execute('claim', A, { objective: 'first' });
   await assert.rejects(s.game.execute('claim', A, { objective: 'first' }), /déjà/);
 });
-test('Gacha : recherche paginée privée et collections filtrées, parcours d’échange sans saisir d’identifiants', async () => {
+test('Gacha : recherche paginée liée à son auteur et collections filtrées, parcours d’échange sans saisir d’identifiants', async () => {
   const s = await setup(), cid = cards[0].id;
   await s.change(A, p => { p.collection[cid] = 1; }); await s.change(B, p => { for (const c of CATALOG.cards.slice(0, 20)) p.collection[c.id] = 1; });
   const search = await s.game.execute('search', A, { view: 'catalog', query: 'Naruto' });
@@ -213,13 +213,13 @@ test('Gacha : reset nettoie le séquestre et les liens, rembourse les autres, re
   assert.deepEqual((await s.profile(A)).collection, {});
   await assert.rejects(confirmGachaReset(s.game, C, token.id, 'main'));
 });
-test('Gacha : handler rend les tirages publics et les confirmations privées ; permissions admin revérifiées', async () => {
+test('Gacha : handler rend les tirages et confirmations publics ; permissions admin revérifiées', async () => {
   const s = await setup(); const events = [];
   const handler = createGachaHandler(s.game, { adminGuildId: 'main', cooldownMs: 0, paint: async d => ({ view: d.view, message: d.message }) });
   const mock = (customId, permission = false, guildId = 'main') => ({ id: Math.random().toString(), user: { id: A }, guildId, customId, isButton: () => true, isChatInputCommand: () => false, memberPermissions: { has: () => permission }, deferReply: async options => events.push(options), editReply: async payload => events.push(payload) });
   await handler(mock(gid(A, 'open', 'mix', '1'))); assert.equal(events[0].flags, 0); assert.equal(events[1].view, 'pull');
   events.length = 0;
-  await handler(mock(gid(A, 'paid'), false)); assert.equal(events[0].flags, 64);
+  await handler(mock(gid(A, 'paid'), false)); assert.equal(events[0].flags, 0);
   const token = await prepareGachaReset(s.game, A, B, 'main');
   await handler(mock(gid(A, 'adminConfirm', token.id), true, 'other')); assert.ok((await s.profile(B)).generation);
   events.length = 0; await handler(mock(gid(A, 'adminConfirm', token.id), false)); assert.match(events.at(-1).message, /administrateurs/);

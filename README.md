@@ -18,7 +18,7 @@ Un **gacha Discord social en français**, inspiré du principe de collection de 
 
 Une seule commande suffit : le menu **Explorer le Manga Club…** relie toutes les rubriques. Les boutons restent réservés aux ouvertures, confirmations et pages. Aucune commande par carte et aucun identifiant à recopier pour jouer ou échanger.
 
-Les profils, le marché, le guide et **les résultats d’ouverture** sont publics. Collection, demandes, confirmations et gestion du profil restent privés. Un contrôle sur une image publique ouvre un panneau personnel ; il ne remplace pas le message partagé. Chaque réponse mentionne uniquement son auteur, sans autoriser `@everyone` ni les rôles. Les portraits personnalisés, ou la première favorite à défaut, servent de repère en haut à droite.
+**Toutes les nouvelles commandes et réponses de jeu sont publiques**, y compris la collection, les menus sociaux, les recherches et les confirmations. Chaque interaction crée une réponse dans le salon : les tirages précédents restent visibles et personne ne remplace le message d’un autre joueur. Les boutons de dépense, de gestion et de confirmation restent liés à leur propriétaire ; le menu de navigation commun ouvre les rubriques de celui qui clique. Chaque réponse mentionne uniquement son auteur, sans autoriser `@everyone` ni les rôles. Les formulaires sont des fenêtres natives ouvertes pour leur auteur ; leur résultat est ensuite publié dans le salon. Les portraits personnalisés, ou la première favorite à défaut, servent de repère en haut à droite.
 
 ## Boosters et progression
 

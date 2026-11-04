@@ -38,7 +38,7 @@ export function parseGachaRoute(interaction) {
     const view = commandViews[interaction.commandName];
     if (!view) throw new GachaError('Le bot est devenu un gacha. Ouvre /profil pour retrouver les nouveaux menus.');
     const target = view === 'profile' ? interaction.options?.getUser?.('joueur') : null;
-    return { action: 'view', args: { view, ...(target ? { targetId: target.id } : {}), ...(view === 'profile' && !target ? { name: interaction.user.globalName || interaction.user.username } : {}) }, public: !['social', 'collection'].includes(view) };
+    return { action: 'view', args: { view, ...(target ? { targetId: target.id } : {}), ...(view === 'profile' && !target ? { name: interaction.user.globalName || interaction.user.username } : {}) }, public: true };
   }
   const parts = String(interaction.customId ?? '').split(':');
   if (parts[0] !== 'ga') throw new GachaError('Ce panneau appartient à l’ancien RPG. Ouvre /profil pour découvrir le gacha.');
@@ -114,11 +114,11 @@ export function parseGachaRoute(interaction) {
   throw new GachaError('Ce contrôle n’est plus disponible. Ouvre /profil.');
 }
 export function createGachaHandler(game, { adminGuildId, paint = renderGacha, cooldownMs = 500 } = {}) {
-  const busy = new Set(), cooldowns = new Map(), revisions = new Map();
+  const busy = new Set(), cooldowns = new Map();
   return async interaction => {
     if (!interaction.isChatInputCommand?.() && !interaction.isButton?.() && !interaction.isStringSelectMenu?.() && !interaction.isUserSelectMenu?.() && !interaction.isModalSubmit?.()) return;
     const owner = interaction.user.id;
-    let acquired = false, update = false;
+    let acquired = false;
     try {
       if (!interaction.guildId) throw new GachaError('Ouvre le Manga Club depuis un serveur Discord.');
       const route = parseGachaRoute(interaction);
@@ -130,10 +130,9 @@ export function createGachaHandler(game, { adminGuildId, paint = renderGacha, co
         const data = route.form === 'text' ? await game.execute('view', owner, { view: 'profile' }) : null;
         await interaction.showModal(gachaModal(owner, route.form, route.arg, data?.p)); return;
       }
-      update = !route.public && !interaction.isChatInputCommand?.() && interaction.message?.flags?.has(64) === true && (!interaction.isModalSubmit?.() || interaction.isFromMessage?.());
-      if (update) await interaction.deferUpdate(); else await interaction.deferReply({ flags: route.public ? 0 : 64 });
-      const key = update ? interaction.message?.id : undefined, revision = key ? (revisions.get(key) ?? 0) + 1 : 0;
-      if (key) revisions.set(key, revision);
+      // Every interaction gets its own public reply: previous pulls stay visible,
+      // and a visitor never edits another collector's shared message.
+      await interaction.deferReply({ flags: 0 });
       let result;
       if (route.upload) {
         if (!['portrait', 'banner'].includes(route.slot)) throw new GachaError('Emplacement inconnu.');
@@ -146,10 +145,9 @@ export function createGachaHandler(game, { adminGuildId, paint = renderGacha, co
         else result.message = 'Collection réinitialisée. Le joueur peut repartir avec /profil.';
       } else result = await game.execute(route.action, owner, route.args, interaction.id);
       const payload = await paint(result, owner);
-      if (!key || revisions.get(key) === revision) await interaction.editReply(payload);
+      await interaction.editReply(payload);
       cooldowns.set(owner, Date.now());
       if (cooldowns.size > 2000) for (const [id, time] of cooldowns) if (time < Date.now() - 60000) cooldowns.delete(id);
-      if (revisions.size > 2000) revisions.clear();
     } catch (error) {
       const expected = error instanceof GachaError;
       if (!expected) console.error('Gacha interaction:', { name: error.name, code: error.code, message: error.message });
@@ -161,8 +159,8 @@ export function createGachaHandler(game, { adminGuildId, paint = renderGacha, co
         const data = { ...context, view: 'error', message, appearance: context.appearance ?? {}, now: Date.now() };
         const payload = await paint(data, owner);
         if (interaction.deferred || interaction.replied) {
-          if (update) await interaction.followUp({ ...payload, flags: 64 }); else await interaction.editReply(payload);
-        } else { await interaction.deferReply({ flags: 64 }); await interaction.editReply(payload); }
+          await interaction.editReply(payload);
+        } else { await interaction.deferReply({ flags: 0 }); await interaction.editReply(payload); }
       } catch (failure) { console.error('Gacha response unavailable:', failure.code ?? failure.name); }
     } finally { if (acquired) busy.delete(owner); }
   };
