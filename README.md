@@ -25,7 +25,7 @@ Une seule commande suffit : le menu **Explorer le Manga Club…** relie toutes l
 - Départ : **300 éclats, 10 boosters rechargeables et 5 boosters de bienvenue**.
 - **1 booster gratuit toutes les 10 minutes**, jusqu’à **10** en réserve rechargeable. Les boosters offerts sont stockés séparément, sans expiration. Les rechargeables sont utilisés en premier ; le temps passé au plafond ne crée pas de recharge cachée.
 - **5 cartes par booster**, ouverture par 1 ou par 5. Chaque carte possède une rareté fixe, une puissance et une aura de collection. Il n’y a plus de combat RPG.
-- **Animations de tirage** : mythique rose/violette avec orbites et particules ; légendaire dorée avec rayons et couronne. Le GIF Canvas se joue une fois (environ quatre secondes), conserve toutes les cartes visibles et se termine sur le résultat complet. Si les deux raretés tombent ensemble, le légendaire donne l’ambiance principale ; les hauts rangs gardent leur couleur. L’animation s’applique aussi aux doublons. La lecture dépend des préférences d’animation du client Discord.
+- **Animations de tirage** : mythique rose/violette avec orbites et particules ; légendaire dorée avec rayons et couronne. Le GIF Canvas se joue une fois (environ quatre secondes), conserve toutes les cartes visibles et se termine sur le résultat complet. Si les deux raretés tombent ensemble, le mythique donne l’ambiance principale ; les hauts rangs gardent leur couleur. L’animation s’applique aussi aux doublons. La lecture dépend des préférences d’animation du client Discord.
 - **Mix multivers**, **sélection du jour**, et **boosters par univers** : la liste propose les principaux univers, et chaque album d’au moins six personnages donne accès à son propre booster. Les deux monnaies d’ouverture fonctionnent pour chacun.
 - Booster contre **150 éclats**, avec confirmation. Les éclats se gagnent uniquement en jouant : quotidien, missions, albums, recyclage et marché. Aucun paiement réel.
 - Quotidien : **3 boosters et 100 éclats**, plus 10 éclats par jour consécutif supplémentaire, plafonné à 160. Renouvellement à **minuit UTC** (01 h en hiver / 02 h en été en France).
@@ -34,14 +34,18 @@ Une seule commande suffit : le menu **Explorer le Manga Club…** relie toutes l
 
 | Rareté | Taux de base par carte | Recyclage / copie |
 | --- | ---: | ---: |
-| Commune | 50 % | 2 éclats |
+| Commune | 51 % | 2 éclats |
 | Peu commune | 28 % | 5 éclats |
 | Rare | 15 % | 12 éclats |
 | Épique | 5 % | 35 éclats |
-| Mythique | 1,7 % | 120 éclats |
-| Légendaire | 0,3 % | 500 éclats |
+| Légendaire | 0,9 % | 120 éclats |
+| Mythique | 0,1 % | 500 éclats |
 
-La **cinquième carte** est toujours **rare ou mieux** : ses taux sont renormalisés sur ces rangs. Après 19 boosters sans épique, le 20e garantit une épique ou mieux ; après 99 sans mythique, le 100e garantit une mythique ou mieux. Les deux compteurs se réinitialisent dès qu’une carte du rang concerné ou supérieur apparaît, et sont partagés entre les boosters. Un petit univers peut ne pas comporter toutes les raretés : les rangs absents sont retirés du tirage et ses taux propres sont affichés avant ouverture. Une garantie utilise le meilleur rang présent si le rang attendu est absent.
+Ordre : **mythique > légendaire > épique > rare > peu commune > commune**. Les taux du tableau concernent les tirages naturels, hors garanties. Un booster de cinq cartes a environ **0,50 %** de chance de contenir au moins une mythique et **4,42 %** de contenir au moins une légendaire, hors leurs garanties propres.
+
+Si les cinq cartes naturelles sont inférieures à rare, la cinquième est remplacée par **une rare**, ou **une épique** si les rares n’existent pas dans l’univers ciblé. Cette garantie normale ne crée pas de mythique ni de légendaire supplémentaire. Une garantie épique ou mieux intervient après **20 boosters** sans en obtenir ; une légendaire ou mieux après **100** ; une mythique après **400**. Elle ne remplace la cinquième carte que si le booster naturel ne satisfait pas déjà le rang attendu, et donne le rang exact requis. Les trois compteurs sont partagés entre tous les boosters et se remettent à zéro dès l’obtention du rang concerné ou supérieur.
+
+Dans un univers ciblé, les chances d’un rang absent sont reportées sur les **communes** ; les chances mythiques et légendaires ne sont jamais renormalisées à la hausse. Les taux sont affichés avant ouverture.
 
 Les raretés, puissance et aura sont des choix d’équilibrage du jeu : elles ne constituent pas un classement officiel des personnages.
 
@@ -87,6 +91,8 @@ Railway : le Dockerfile et `railway.json` existants restent utilisés. **Aucune 
 Le point d’entrée utilise désormais exclusivement `GachaGame` et ses interactions. **Les anciens boutons RPG sont refusés** avec une invitation à ouvrir `/profil`. Les anciens documents `player`, guildes et inventaires restent conservés dans la base : aucune progression RPG n’est effacée et aucun or RPG n’est converti. À la première visite uniquement, le nom, la description, le portrait et la bannière peuvent être repris ; les données gacha vivent dans des documents `gacha_*` distincts.
 
 Le moteur RPG, ses commandes, ses illustrations, ses tests et ses anciens tutoriels ont été retirés du dépôt. Seul le gacha et son infrastructure restent dans cette version ; les anciennes révisions restent accessibles dans l’historique Git.
+
+Le correctif des raretés conserve toutes les collections existantes et le nom de chaque rareté : une carte déjà mythique reste mythique, une légendaire reste légendaire. Seuls les rangs numériques sont inversés, les scores de collection et valeurs de recyclage suivent l’ordre corrigé. L’ancien compteur des deux hauts rangs devient le compteur légendaire ; le nouveau compteur mythique commence à zéro. Aucune carte, annonce, amitié ou monnaie n’est supprimée. Les anciennes confirmations doivent être rouvertes pour afficher les valeurs actualisées.
 
 ## Vérifier les changements
 

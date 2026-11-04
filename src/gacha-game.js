@@ -1,5 +1,6 @@
 import { randomInt, randomBytes } from 'node:crypto';
-import { CARDS, SERIES, SERIES_CARDS, CATALOG, RARITIES, SETTINGS, poolFor, dailyTheme, cardId } from './gacha-catalog.js';
+import { CARDS, SERIES, SERIES_CARDS, CATALOG, RARITIES, RANK, SETTINGS, poolFor, dailyTheme, cardId, normalizedRates } from './gacha-catalog.js';
+import { ODDS_VERSION } from './gacha-rarities.js';
 import { GachaError } from './errors.js';
 export { GachaError } from './errors.js';
 const check = (ok, message) => { if (!ok) throw new GachaError(message); };
@@ -24,15 +25,22 @@ export class GachaGame {
     if (!p) {
       const imported = await tx.get('gacha_import', userId);
       const old = imported ? null : await tx.get('player', userId);
-      p = { id: userId, generation: id(), name: clean(name || old?.name || 'Collectionneur', 32), bio: clean(old?.customization?.bio || '', 300), createdAt: this.clock(), coins: 300, tickets: SETTINGS.freeCap, ticketAt: this.clock(), stock: 5, opened: 0, pityEpic: 0, pityMythic: 0, dailyAt: null, streak: 0, collection: {}, discovered: {}, favorites: [], wishlist: [], friends: [], blocked: [], trades: 0, sold: 0, recycled: 0, claims: [], albums: [], recent: [], tasks: { day: day(this.clock()), opens: 0, recycles: 0, trades: 0, claimed: [] } };
+      p = { id: userId, generation: id(), oddsVersion: ODDS_VERSION, name: clean(name || old?.name || 'Collectionneur', 32), bio: clean(old?.customization?.bio || '', 300), createdAt: this.clock(), coins: 300, tickets: SETTINGS.freeCap, ticketAt: this.clock(), stock: 5, opened: 0, pityEpic: 0, pityLegendary: 0, pityMythic: 0, dailyAt: null, streak: 0, collection: {}, discovered: {}, favorites: [], wishlist: [], friends: [], blocked: [], trades: 0, sold: 0, recycled: 0, claims: [], albums: [], recent: [], tasks: { day: day(this.clock()), opens: 0, recycles: 0, trades: 0, claimed: [] } };
       for (const slot of imported ? [] : ['portrait', 'banner']) {
         const media = await tx.get('profile_media', `${userId}.${slot}`);
         if (media) await tx.set('gacha_media', `${userId}.${slot}`, media);
       }
       await tx.set('gacha_import', userId, { id: userId, at: this.clock() });
     }
-    this.recharge(p);
+    this.normalizeOdds(p); this.recharge(p);
     return p;
+  }
+  normalizeOdds(p) {
+    if (p.oddsVersion === ODDS_VERSION) return;
+    // The old counter tracked old rank >=4, i.e. legendary-or-better now.
+    p.pityLegendary = Math.max(0, Math.min(SETTINGS.legendaryPity - 1, Number.isInteger(p.pityMythic) ? p.pityMythic : 0));
+    p.pityMythic = 0;
+    p.oddsVersion = ODDS_VERSION;
   }
   recharge(p) {
     const now = this.clock();
@@ -51,7 +59,7 @@ export class GachaGame {
     p.collection[cid] -= quantity;
     if (!p.collection[cid]) delete p.collection[cid];
   }
-  async save(tx, p) { await tx.set(KIND, p.id, p); }
+  async save(tx, p) { this.normalizeOdds(p); await tx.set(KIND, p.id, p); }
   async expire(tx) {
     const now = this.clock();
     for (const listing of await tx.list('gacha_listing')) {
@@ -85,14 +93,14 @@ export class GachaGame {
       if (action === 'view') effect = { view: args.view || 'profile', ...args };
       else if (action === 'prepare') {
         check(['recycle', 'list', 'buy', 'cancelListing', 'trade', 'tradeRespond', 'recycleDuplicates', 'buyPack'].includes(args.operation), 'Action inconnue.');
-        const pending = { id: id(), owner: userId, generation: p.generation, operation: args.operation, args: args.values ?? {}, expiresAt: this.clock() + 5 * 60000 };
+        const pending = { id: id(), owner: userId, generation: p.generation, oddsVersion: ODDS_VERSION, operation: args.operation, args: args.values ?? {}, expiresAt: this.clock() + 5 * 60000 };
         // Validate against current state and create a human-readable immutable review.
         pending.review = await this.review(tx, p, pending.operation, pending.args);
         await tx.set('gacha_confirm', pending.id, pending);
         effect = { view: 'confirm', pending };
       } else if (action === 'confirm') {
         const pending = await tx.get('gacha_confirm', args.token);
-        check(pending && pending.owner === userId && pending.generation === p.generation && pending.expiresAt > this.clock(), 'Confirmation expirée ou déjà utilisée. Recommence depuis le menu.');
+        check(pending && pending.owner === userId && pending.generation === p.generation && pending.oddsVersion === ODDS_VERSION && pending.expiresAt > this.clock(), 'Confirmation expirée ou déjà utilisée. Recommence depuis le menu.');
         effect = await this.mutate(tx, p, pending.operation, pending.args);
         await tx.delete('gacha_confirm', pending.id);
       } else effect = await this.mutate(tx, p, action, args);
@@ -134,17 +142,32 @@ export class GachaGame {
     return operation === 'buy' ? `Acheter le lot de ${l.quantity} × ${CARDS.get(l.cardId).name}\nCoût total : ${l.price * l.quantity} éclats.` : `Annuler la vente de ${l.quantity} × ${CARDS.get(l.cardId).name} et récupérer les cartes.`;
   }
   duplicates(p) { return Object.entries(p.collection).filter(([cid, q]) => q > 1 && CARDS.get(cid)?.rarity <= 2).map(([id, quantity]) => ({ id, quantity: quantity - 1 })); }
-  draw(pool, minimum = 0) {
+  draw(pool) {
     const groups = RARITIES.map((_, rarity) => pool.filter(c => c.rarity === rarity));
-    const available = groups.map((g, i) => g.length && i >= minimum ? i : -1).filter(i => i >= 0);
-    // A small theme may not have every tier: the guarantee targets its highest available tier.
-    if (!available.length) return this.draw(pool, Math.max(...pool.map(c => c.rarity)));
-    const total = available.reduce((n, i) => n + RARITIES[i].rate, 0);
-    let roll = Math.min(.999999999, Math.max(0, this.random())) * total;
-    let rarity = available.at(-1);
-    for (const i of available) { roll -= RARITIES[i].rate; if (roll < 0) { rarity = i; break; } }
+    const rates = normalizedRates(pool);
+    let roll = Math.min(.999999999, Math.max(0, this.random())) * 100;
+    let rarity = RANK.MYTHIC;
+    for (let i = 0; i < rates.length; i++) { roll -= rates[i]; if (roll < 0) { rarity = i; break; } }
     const g = groups[rarity];
     return g[Math.min(g.length - 1, Math.floor(Math.max(0, this.random()) * g.length))];
+  }
+  guaranteedCard(pool, rank) {
+    // Normal guarantee: rare, or epic if rares do not exist in this universe.
+    // It never upgrades itself to legendary/mythic because a lower tier is absent.
+    const wanted = rank === RANK.RARE && !pool.some(c => c.rarity === RANK.RARE) ? RANK.EPIC : rank;
+    const candidates = pool.filter(c => c.rarity === wanted);
+    check(candidates.length, 'Ce booster ne contient pas la rareté garantie. Choisis le mix multivers.');
+    return candidates[Math.min(candidates.length - 1, Math.floor(Math.max(0, this.random()) * candidates.length))];
+  }
+  rollPack(p, pool) {
+    const minimum = p.pityMythic >= SETTINGS.mythicPity - 1 ? RANK.MYTHIC : p.pityLegendary >= SETTINGS.legendaryPity - 1 ? RANK.LEGENDARY : p.pityEpic >= SETTINGS.epicPity - 1 ? RANK.EPIC : RANK.RARE;
+    const batch = Array.from({ length: SETTINGS.packSize }, () => this.draw(pool));
+    if (Math.max(...batch.map(c => c.rarity)) < minimum) batch[4] = this.guaranteedCard(pool, minimum);
+    const max = Math.max(...batch.map(c => c.rarity));
+    p.pityEpic = max >= RANK.EPIC ? 0 : p.pityEpic + 1;
+    p.pityLegendary = max >= RANK.LEGENDARY ? 0 : p.pityLegendary + 1;
+    p.pityMythic = max >= RANK.MYTHIC ? 0 : p.pityMythic + 1;
+    return batch;
   }
   async mutate(tx, p, action, a) {
     const now = this.clock();
@@ -161,17 +184,12 @@ export class GachaGame {
         }
         const pulls = [];
         for (let n = 0; n < count; n++) {
-          const minimum = p.pityMythic >= SETTINGS.mythicPity - 1 ? 4 : p.pityEpic >= SETTINGS.epicPity - 1 ? 3 : 2;
-          let max = 0;
-          for (let slot = 0; slot < SETTINGS.packSize; slot++) {
-            const c = this.draw(pool, slot === 4 ? minimum : 0);
+          for (const c of this.rollPack(p, pool)) {
             const fresh = !p.discovered[c.id];
-            this.add(p, c.id, 1); max = Math.max(max, c.rarity);
+            this.add(p, c.id, 1);
             pulls.push({ cardId: c.id, fresh });
           }
           p.opened++; p.tasks.opens++;
-          p.pityEpic = max >= 3 ? 0 : p.pityEpic + 1;
-          p.pityMythic = max >= 4 ? 0 : p.pityMythic + 1;
         }
         p.recent = [...pulls, ...p.recent].slice(0, 40);
         return { view: 'pull', pack: a.pack ?? 'mix', pulls, message: `${count} booster(s) ouvert(s) · ${pulls.filter(c => c.fresh).length} nouvelles découvertes.` };

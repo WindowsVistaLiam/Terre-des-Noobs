@@ -43,7 +43,7 @@ async function encode() {
     for (const r of regions) ctx.drawImage(base, r.x, r.y, r.w, r.h, r.x, r.y, r.w, r.h);
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, header.w, header.h); ctx.clip();
     const hx = 720 * scale, hy = 88 * scale;
-    if (celebration.rarity === 5) {
+    if (celebration.rarity === 4) {
       ctx.strokeStyle = '#ffd26050'; ctx.lineWidth = 2;
       for (let i = 0; i < 16; i++) {
         const a = i / 16 * TAU + angle * .12;
@@ -57,7 +57,7 @@ async function encode() {
     }
     ctx.restore();
     for (const [j, b] of boxes.entries()) {
-      const c = b.rarity === 5 ? '#ffd260' : '#ff7997';
+      const c = b.rarity === 4 ? '#ffd260' : '#ff7997';
       ctx.save(); ctx.beginPath(); ctx.rect(b.x - 12, b.y - 12, b.w + 24, b.h + 24); ctx.clip();
       ctx.strokeStyle = `${c}bb`; ctx.lineWidth = 2 + Math.sin(angle) * .5;
       ctx.beginPath(); ctx.roundRect(b.x - 5, b.y - 5, b.w + 10, b.h + 10, 16); ctx.stroke();
@@ -68,7 +68,7 @@ async function encode() {
       else if (travel < 2 * b.w + b.h) { sx = b.x + 2 * b.w + b.h - travel; sy = b.y + b.h + 5; }
       else { sx = b.x - 5; sy = b.y + perimeter - travel; }
       star(ctx, sx, sy, 6, c);
-      if (b.rarity === 5) crown(ctx, b.x + b.w / 2, b.y - 5, 9, '#fff4be');
+      if (b.rarity === 4) crown(ctx, b.x + b.w / 2, b.y - 5, 9, '#fff4be');
       else orbit(ctx, b.x + b.w / 2, b.y - 5, 11, -angle, '#b68cff');
       ctx.restore();
     }

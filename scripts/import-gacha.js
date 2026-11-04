@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { normalizeCatalog, ODDS_VERSION } from '../src/gacha-rarities.js';
 const dir = new URL('../src/assets/gacha/', import.meta.url);
 const cache = new URL('../.local/gacha-import/', import.meta.url);
 await mkdir(dir, { recursive: true });
@@ -51,7 +52,8 @@ const cards = raw.flatMap(c => {
 });
 // Fixed rarity per character, distributed within each series; never changes an existing card.
 let previous = { cards: [] };
-try { previous = JSON.parse(await readFile(new URL('catalog.json', dir), 'utf8')); } catch {}
+try { previous = normalizeCatalog(JSON.parse(await readFile(new URL('catalog.json', dir), 'utf8'))); }
+catch (error) { if (error.code !== 'ENOENT') throw error; }
 const existing = new Map(previous.cards.map(c => [c.id, c]));
 for (const c of cards) if (existing.has(c.id)) c.seriesId = existing.get(c.id).seriesId;
 for (const c of previous.cards) if (!used.has(Number(c.id.slice(2)))) cards.push(c);
@@ -106,6 +108,6 @@ for (let start = 0; start < cards.length; start += 100) {
   }
   await writeFile(new URL(`atlas-${Math.floor(start / 100)}.webp`, dir), await atlas.encode('webp', 80));
 }
-const output = { version: 1, importedAt: new Date().toISOString(), provider: 'AniList', source: 'https://anilist.co', cards, series: [...series.values()] };
+const output = { version: 1, rarityVersion: ODDS_VERSION, importedAt: new Date().toISOString(), provider: 'AniList', source: 'https://anilist.co', cards, series: [...series.values()] };
 await writeFile(new URL('catalog.json', dir), JSON.stringify(output));
 console.log(`Import terminé : ${cards.length} cartes, ${series.size} univers, ${portraits.size} portraits.`);

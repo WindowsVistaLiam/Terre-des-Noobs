@@ -129,10 +129,10 @@ export async function drawGacha(data) {
     const selected = data.pack || 'mix', selectedPool = poolFor(selected, data.now);
     const rates = normalizedRates(selectedPool).map((n, i) => `${RARITIES[i].short} ${n.toFixed(1)} %`).join(' · ');
     panel(ctx, packName(selected, data.now).toUpperCase(), `${selectedPool.length.toLocaleString('fr-FR')} personnages · 5 cartes par booster\nUne rare ou mieux garantie. Gratuit ou 150 éclats.\nTaux hors garanties : ${rates}\nChange de booster dans la liste ou depuis un album.`, M, y, 580, 245, C.gold);
-    panel(ctx, 'LA SÉLECTION DU JOUR', `${data.theme.name}\n5 cartes de cet univers. Renouvellement à minuit UTC.\nLes raretés absentes sont retirées du tirage.`, 652, y, 580, 245, '#62aaff'); y += 272;
+    panel(ctx, 'LA SÉLECTION DU JOUR', `${data.theme.name}\n5 cartes de cet univers. Renouvellement à minuit UTC.\nUn rang absent profite aux communes.\nMythique : 0,1 % • Légendaire : 0,9 % par carte.`, 652, y, 580, 245, '#62aaff'); y += 272;
     const next = p.tickets < SETTINGS.freeCap ? `${Math.max(1, Math.ceil((p.ticketAt + SETTINGS.freeMs - data.now) / 60000))} min` : 'Réserve rechargeable pleine';
     panel(ctx, 'LES BOOSTERS GRATUITS', `${p.tickets}/${SETTINGS.freeCap} rechargeables • +1 toutes les 10 minutes\nProchaine recharge : ${next}\n${p.stock} boosters offerts en réserve, sans limite de temps.`, M, y, 580, 230);
-    panel(ctx, 'LE DESTIN FINIT PAR SOURIRE', `Épique ou mieux : au plus tard dans ${SETTINGS.epicPity - p.pityEpic} booster(s).\nMythique ou mieux : au plus tard dans ${SETTINGS.mythicPity - p.pityMythic} booster(s).\nGaranties communes aux deux boosters.`, 652, y, 580, 230, '#b68cff');
+    panel(ctx, 'LE DESTIN FINIT PAR SOURIRE', `Épique ou mieux : dans ${SETTINGS.epicPity - p.pityEpic} booster(s) maximum.\nLégendaire ou mieux : dans ${SETTINGS.legendaryPity - p.pityLegendary} maximum.\nMythique : dans ${SETTINGS.mythicPity - p.pityMythic} maximum.\nCompteurs partagés entre tous les boosters.`, 652, y, 580, 230, '#b68cff');
   } else if (v === 'pull') {
     for (const [i, pull] of data.pulls.entries()) await drawCard(ctx, CARDS.get(pull.cardId), M + i % 5 * 241, y + Math.floor(i / 5) * 370, 220, 345, { fresh: pull.fresh });
   } else if (['collection', 'catalog', 'wishlist', 'album', 'tradeChoose'].includes(v)) {
@@ -193,9 +193,9 @@ export async function drawGacha(data) {
   } else if (v === 'info') {
     panel(ctx, 'COMMENT JOUER ?', '1. Récupère tes boosters gratuits et ton quotidien.\n2. Ouvre 5 cartes, puis complète tes albums.\n3. Protège tes favorites et recycle tes doublons.\n4. Échange avec tes amis ou vends au marché.\nLes éclats se gagnent en jouant, sans argent réel.', M, y, 580, 290, accent);
     panel(ctx, 'TAUX DU MIX MULTIVERS', RARITIES.map(r => `${r.name} : ${r.rate} % · recyclage ${r.recycle}`).join('\n'), 652, y, 580, 290, '#b68cff'); y += 315;
-    panel(ctx, 'LES GARANTIES', 'Chaque booster : une rare ou mieux dans la 5e carte.\n20 boosters sans épique → épique ou mieux garantie.\n100 sans mythique → mythique ou mieux garantie.\nLe compteur se remet à zéro dès un tirage du rang concerné. Les garanties modifient les taux de la 5e carte.', M, y, 580, 280, C.gold);
+    panel(ctx, 'LES GARANTIES', '5 cartes sans rare ? La dernière devient rare (épique si les rares sont absentes de cet univers).\nÉpique ou mieux : après 20 boosters sans en obtenir.\nLégendaire ou mieux : après 100 boosters sans en obtenir.\nMythique : après 400 boosters sans en obtenir.\nLa garantie normale ne crée jamais de mythique ou de légendaire supplémentaire.', M, y, 580, 330, C.gold);
     const rates = normalizedRates(poolFor('daily', data.now));
-    panel(ctx, `SÉLECTION : ${data.theme.name}`, `${RARITIES.map((r, i) => `${r.short} ${rates[i].toFixed(2)} %`).join(' · ')}\nTaux avant les garanties, renormalisés sur les raretés présentes.\nPersonnages et portraits : AniList. Catalogue embarqué, indépendant de Kyara.\nRécompenses et missions : renouvellement à minuit UTC.`, 652, y, 580, 280, '#62aaff');
+    panel(ctx, `SÉLECTION : ${data.theme.name}`, `${RARITIES.map((r, i) => `${r.short} ${rates[i].toFixed(2)} %`).join(' · ')}\nTaux par carte hors garanties. Les chances d’un rang absent vont aux communes.\nPour 5 cartes : environ 0,50 % d’au moins une mythique et 4,42 % d’au moins une légendaire, hors garanties.\nPersonnages et portraits : AniList.\nQuotidien : renouvellement à minuit UTC.`, 652, y, 580, 330, '#62aaff');
   } else if (v === 'confirm') {
     panel(ctx, 'VÉRIFIE CETTE OPÉRATION', data.pending.review, M, y, W - M * 2, 330, accent);
     panel(ctx, 'À TOI DE CHOISIR', 'Cette confirmation t’est réservée et expire dans 5 minutes.\nTes cartes et ton solde seront vérifiés à nouveau au moment de valider.', M, y + 355, W - M * 2, 165, C.muted);

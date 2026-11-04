@@ -52,14 +52,17 @@ test('Gacha : les boosters en réserve ne rechargent pas et un replay ne retire 
   assert.deepEqual(again.pulls, first.pulls); assert.equal(again.p.opened, 5); assert.ok(again.replay);
   await assert.rejects(s.game.execute('open', B, { pack: 'mix' }, 'same-open'), /appartient/);
 });
-test('Gacha : les deux garanties se déclenchent et leurs compteurs sont remis à zéro', async () => {
+test('Gacha : les trois garanties se déclenchent et leurs compteurs sont remis à zéro', async () => {
   const s = await setup();
   await s.change(A, p => { p.pityEpic = 19; });
   const epic = await s.game.execute('open', A, { pack: 'mix' });
   assert.equal(CARDS.get(epic.pulls[4].cardId).rarity, 3); assert.equal(epic.p.pityEpic, 0);
-  await s.change(A, p => { p.pityMythic = 99; });
+  await s.change(A, p => { p.pityLegendary = 99; });
+  const legendary = await s.game.execute('open', A, { pack: 'mix' });
+  assert.equal(CARDS.get(legendary.pulls[4].cardId).rarity, 4); assert.equal(legendary.p.pityLegendary, 0);
+  await s.change(A, p => { p.pityMythic = 399; });
   const mythic = await s.game.execute('open', A, { pack: 'mix' });
-  assert.equal(CARDS.get(mythic.pulls[4].cardId).rarity, 4); assert.equal(mythic.p.pityMythic, 0); assert.equal(mythic.p.pityEpic, 0);
+  assert.equal(CARDS.get(mythic.pulls[4].cardId).rarity, 5); assert.equal(mythic.p.pityMythic, 0); assert.equal(mythic.p.pityLegendary, 0); assert.equal(mythic.p.pityEpic, 0);
 });
 test('Gacha : boosters payants atomiques, prix entier et rejet des quantités malformées', async () => {
   const s = await setup();
@@ -255,12 +258,13 @@ test('Gacha : parcours Discord complet de proposition, sélection de joueur et a
   route = parseGachaRoute(actor(B, gid(B, 'confirm', pending.pending.id)));
   assert.equal((await s.game.execute(route.action, B, route.args)).trade.status, 'accepted');
 });
-test('Gacha : 100 boosters sans tirage chanceux déclenchent les garanties prévues sans coût supplémentaire', async () => {
-  const s = await setup(); await s.change(A, p => { p.stock = 100; p.tickets = 0; });
-  for (let n = 1; n <= 100; n++) {
+test('Gacha : 400 boosters sans tirage chanceux déclenchent les garanties prévues sans coût supplémentaire', async () => {
+  const s = await setup(); await s.change(A, p => { p.stock = 400; p.tickets = 0; });
+  for (let n = 1; n <= 400; n++) {
     const d = await s.game.execute('open', A, { pack: 'mix' });
     if (n === 20) assert.equal(CARDS.get(d.pulls[4].cardId).rarity, 3);
     if (n === 100) assert.equal(CARDS.get(d.pulls[4].cardId).rarity, 4);
+    if (n === 400) assert.equal(CARDS.get(d.pulls[4].cardId).rarity, 5);
   }
-  const p = await s.profile(A); assert.equal(p.opened, 100); assert.equal(p.coins, 300); assert.equal(p.pityMythic, 0);
+  const p = await s.profile(A); assert.equal(p.opened, 400); assert.equal(p.coins, 300); assert.equal(p.pityMythic, 0);
 });

@@ -10,17 +10,18 @@ Les images ci-dessous proviennent du moteur Canvas réel, avec des données de d
 ![Ouverture](images/gacha-tirage.png)
 ![Collection](images/gacha-collection.png)
 ![Échange](images/gacha-echange.png)
+![Taux et garanties corrigés](images/gacha-info.png)
 
 L’annonce prête à copier est dans [annonces/gacha.txt](annonces/gacha.txt).
 
 ## Organisation du code
 
-- `gacha-catalog.js` : catalogue statique, sources, six raretés, taux, prix, garanties et sélection des boosters.
+- `gacha-catalog.js` / `gacha-rarities.js` : catalogue statique, sources, six raretés, taux, prix, garanties et sélection des boosters. Hiérarchie : M > L > E > R > U > C.
 - `gacha-game.js` : logique transactionnelle et vues de jeu. Documents `gacha_player`, `gacha_listing`, `gacha_trade`, `gacha_friend`, `gacha_confirm`, `gacha_receipt`, `gacha_search`, `gacha_import`, `gacha_media`.
 - `gacha-controller.js` : sept commandes, contrôle d’identité, formulaires, visibilité, anti-double-clic et gestion des délais Discord. Les anciens identifiants `tdn`/`tdnp` sont refusés.
 - `gacha-ui.js` : contrôles Discord, listes, boutons, navigation et pièces jointes PNG/GIF.
 - `gacha-canvas.js` : composition graphique d’origine, cartes et portraits, bannière, vitrine et atlas WebP, avec cache limité à douze atlas.
-- `gacha-animation.js` / `gacha-animation-worker.js` : détection des hauts rangs et encodage GIF dans un worker. Mythique : orbites roses/violettes ; légendaire : couronne et rayons dorés. Priorité au légendaire pour l’ambiance lorsqu’un tirage contient les deux. Jusqu’à cinq cartes sont mises en mouvement dans une même animation ; toutes les cartes du tirage restent affichées.
+- `gacha-animation.js` / `gacha-animation-worker.js` : détection des hauts rangs et encodage GIF dans un worker. Mythique : orbites roses/violettes ; légendaire : couronne et rayons dorés. Priorité au mythique pour l’ambiance lorsqu’un tirage contient les deux. Jusqu’à cinq cartes sont mises en mouvement dans une même animation ; toutes les cartes du tirage restent affichées.
 - `gacha-admin.js` : préparation et confirmation de reset, génération du profil, nettoyage des liens et audit. Les autorisations de serveur et d’administrateur sont contrôlées par le handler avant chaque appel ; ce module n’est jamais accessible au dispatch du jeu.
 
 Une transaction PostgreSQL et le verrou consultatif partagé existant couvrent chaque dépense ou transfert. Les cartes en vente et celles proposées en échange sont retirées de l’inventaire et réservées dans le document correspondant. Elles reviennent exactement une fois à l’annulation, au refus ou à l’expiration. L’expiration est vérifiée avant les actions et dans le nettoyage périodique.
@@ -43,7 +44,17 @@ Sources primaires : [API AniList](https://docs.anilist.co/), [objet Character](h
 
 Les portraits sont regroupés dans cinquante atlas WebP (10 × 10 cellules de 160 × 220), environ 36 Mo avec le JSON. Tous les fichiers sont inclus dans l’image Docker. Le site Kyara peut être indisponible sans empêcher de jouer ; AniList n’est contacté que lors d’un import explicite de construction.
 
-`npm run catalog:import` utilise le cache local, conserve les identifiants, univers et raretés existants, et reconstruit tous les atlas. Une nouvelle fenêtre de popularité ne supprime pas les cartes déjà connues. Les taux dépendent de la présence d’une rareté, pas du nombre de personnages de cette rareté. Dans un univers ciblé, ils sont renormalisés ; la cinquième carte et les garanties ont des taux conditionnels distincts.
+`npm run catalog:import` utilise le cache local, conserve les identifiants, univers et raretés existants, et reconstruit tous les atlas. Une nouvelle fenêtre de popularité ne supprime pas les cartes déjà connues. Les taux ne dépendent pas du nombre de personnages de chaque rang. Un rang absent reporte ses chances sur les communes : les hauts rangs gardent leurs taux de base dans tous les boosters ciblés autorisés.
+
+## Équilibrage des raretés, version 2
+
+La version initiale avait placé L au-dessus de M et conditionnait systématiquement la cinquième carte aux rangs rares ou supérieurs. Le taux M annoncé à 1,7 % montait ainsi à 7,73 % sur la cinquième carte du mix, soit 13,84 % de chance d’au moins une M par booster hors pity. Sans rang R dans un petit univers, la renormalisation portait cette chance à environ 30,16 %.
+
+L’ordre est désormais M (5) > L (4) > E (3) > R (2) > U (1) > C (0). Taux naturels par carte : C 51 %, U 28 %, R 15 %, E 5 %, L 0,9 %, M 0,1 %. Pour les deux hauts rangs, la probabilité d’au moins une carte dans cinq tirages naturels vaut `1 - (1 - taux)^5`, soit M 0,4990 % et L 4,4197 %, hors pity. Le nombre de cartes du catalogue dans chaque rang n’intervient pas dans ce calcul.
+
+`rollPack` effectue d’abord cinq tirages naturels. S’ils sont tous inférieurs au rang requis, seule la cinquième carte est remplacée, au rang exact de la garantie. La garantie ordinaire donne R, ou E si R manque ; elle ne peut pas ajouter L ou M. Garanties propres : E+ après 20 boosters sans E+, L+ après 100 sans L+, M après 400 sans M. Un haut rang déjà présent dans le booster satisfait sa garantie sans recevoir une seconde carte exceptionnelle.
+
+Les tests couvrent 200 000 tirages répartis exactement dans les intervalles, 200 000 boosters simulés hors pity, tous les 247 univers ciblés, les trois garanties, et les migrations. Les cartes déjà distribuées gardent leurs identifiants et leur nom de rareté : les anciens rangs numériques 4/5 sont remappés dans le catalogue, sans toucher aux quantités, favoris, échanges et annonces. Les scores et valeurs de recyclage suivent le rang corrigé. Les joueurs ont un `oddsVersion` ; l’ancien `pityMythic` (suivi des deux anciens hauts rangs) est transféré dans `pityLegendary`, le nouveau `pityMythic` démarre à zéro. Les confirmations portent aussi une version et celles d’avant le correctif sont refusées pour éviter un tarif de recyclage différent de l’aperçu.
 
 L’import n’est pas une synchronisation continue et ne couvre pas tous les mangas existants. Pour ajouter des personnages au-delà de la fenêtre de 5 000, il faudra étendre l’import par œuvres ou par identifiants en conservant les mêmes clés de carte. Ne pas remplacer les identifiants de cartes déjà distribuées.
 

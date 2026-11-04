@@ -8,7 +8,7 @@ export function rarePull(data) {
   }).sort((a, b) => b.rarity - a.rarity || a.index - b.index);
   if (!rares.length) return null;
   const rarity = rares[0].rarity;
-  return { rarity, kind: rarity === 5 ? 'legendaire' : 'mythique', title: rarity === 5 ? 'LÉGENDAIRE !' : 'MYTHIQUE !', color: rarity === 5 ? '#ffd260' : '#ff7997', rares: rares.slice(0, 5), total: rares.length };
+  return { rarity, kind: rarity === 5 ? 'mythique' : 'legendaire', title: rarity === 5 ? 'MYTHIQUE !' : 'LÉGENDAIRE !', color: rarity === 5 ? '#ff7997' : '#ffd260', rares: rares.slice(0, 5), total: rares.length };
 }
 let tail = Promise.resolve(), pending = 0;
 export async function animateRarePull(canvas, data) {

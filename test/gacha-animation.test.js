@@ -13,10 +13,10 @@ async function fixture(rarities) {
   const data = await game.execute('open', user, { pack: 'mix' });
   return { ...data, pulls: rarities.map(rarity => ({ cardId: byRank(rarity).id, fresh: false })) };
 }
-test('Animation : seulement les ouvertures mythiques/légendaires, même en doublon, priorité au légendaire', () => {
+test('Animation : seulement les ouvertures mythiques/légendaires, même en doublon, priorité au mythique', () => {
   const pulls = [4, 5, 4].map(r => ({ cardId: byRank(r).id, fresh: false }));
-  assert.equal(rarePull({ view: 'pull', pulls }).kind, 'legendaire');
-  assert.equal(rarePull({ view: 'pull', pulls: [pulls[0]] }).kind, 'mythique');
+  assert.equal(rarePull({ view: 'pull', pulls }).kind, 'mythique');
+  assert.equal(rarePull({ view: 'pull', pulls: [pulls[0]] }).kind, 'legendaire');
   assert.equal(rarePull({ view: 'collection', pulls }), null);
   assert.equal(rarePull({ view: 'pull', pulls: [{ cardId: byRank(3).id }] }), null);
 });
@@ -26,7 +26,7 @@ test('Animation : GIFs réellement animés et distincts, une seule lecture, sans
     const data = await fixture([0, 1, rank, 2, 3]);
     const before = structuredClone(data);
     const panel = await renderGacha(data, user), file = panel.files[0];
-    assert.match(file.name, rank === 4 ? /mythique\.gif$/ : /legendaire\.gif$/);
+    assert.match(file.name, rank === 5 ? /mythique\.gif$/ : /legendaire\.gif$/);
     assert.equal(file.attachment.toString('ascii', 0, 6), 'GIF89a');
     assert.ok(file.attachment.length < 8_000_000);
     const gif = new GifReader(file.attachment);
@@ -52,7 +52,7 @@ test('Animation : GIFs réellement animés et distincts, une seule lecture, sans
 test('Animation : ouverture de 25 cartes avec plusieurs hauts rangs reste sous la limite de pièce jointe', async () => {
   const data = await fixture(Array.from({ length: 25 }, (_, i) => i < 3 ? 5 : i < 9 ? 4 : i % 4));
   const panel = await renderGacha(data, user), file = panel.files[0];
-  assert.match(file.name, /legendaire\.gif$/); assert.ok(file.attachment.length < 8_000_000);
+  assert.match(file.name, /mythique\.gif$/); assert.ok(file.attachment.length < 8_000_000);
   const gif = new GifReader(file.attachment); assert.equal(gif.numFrames(), 32); assert.ok(gif.height > 1500);
   assert.ok(panel.components.length <= 5); assert.equal(rarePull(data).total, 9);
 });
@@ -67,9 +67,9 @@ test('Animation : les autres résultats sont des PNG et une panne d’encodage c
 });
 test('Animation : rejouer le même reçu retrouve exactement les mêmes cartes et le même paiement', async () => {
   let n = 0;
-  const game = new GachaGame(new MemoryStore(), { random: () => n++ % 2 ? 0 : .985 });
+  const game = new GachaGame(new MemoryStore(), { random: () => n++ % 2 ? 0 : .9995 });
   const data = await game.execute('open', user, { pack: 'mix' }, 'rare-open');
-  assert.equal(rarePull(data).rarity, 4);
+  assert.equal(rarePull(data).rarity, 5);
   await renderGacha(data, user);
   const replay = await game.execute('open', user, { pack: 'mix' }, 'rare-open');
   assert.deepEqual(replay.pulls, data.pulls); assert.equal(replay.p.opened, 1);

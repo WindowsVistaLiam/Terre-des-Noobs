@@ -1,0 +1,16 @@
+💎 CORRECTIF — LES MYTHIQUES RETROUVENT LEUR PLACE !
+
+Vous aviez raison : les mythiques tombaient trop souvent. L’ordre des hauts rangs était inversé, et la cinquième carte garantie augmentait trop leurs chances.
+
+La hiérarchie est corrigée : **Mythique > Légendaire > Épique > Rare > Peu commune > Commune**.
+
+🌌 **Mythique : 0,1 % par carte**, soit environ 0,50 % de chance d’en avoir au moins une dans un booster de 5 cartes, hors garantie.
+👑 **Légendaire : 0,9 % par carte**, soit environ 4,42 % par booster, hors garantie.
+
+Les boosters ciblés ne gonflent plus les taux des hauts rangs. La garantie de base ajoute une rare — ou une épique si l’univers n’a pas de rares — sans créer de mythique ni de légendaire supplémentaire.
+
+Garanties de malchance : épique ou mieux après 20 boosters sans en obtenir, légendaire ou mieux après 100, mythique après 400. Les compteurs sont partagés entre les boosters ; chaque rang obtenu remet son compteur et ceux des rangs inférieurs à zéro.
+
+Vos cartes déjà obtenues sont conservées : les mythiques restent mythiques et les légendaires restent légendaires. Leurs scores et valeurs de recyclage suivent désormais le bon ordre. Le nouveau compteur mythique commence à zéro ; l’ancien compteur des hauts rangs devient le compteur légendaire.
+
+Tous les nouveaux taux sont visibles dans **/info**. Bonne chasse aux mythiques ! ✨

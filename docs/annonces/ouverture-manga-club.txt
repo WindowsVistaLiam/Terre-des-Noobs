@@ -6,7 +6,7 @@ Le bot fait peau neuve : ouvrez des boosters, retrouvez vos personnages préfér
 
 🎁 5 cartes par booster, un booster gratuit toutes les 10 minutes et une récompense quotidienne. Choisissez le multivers ou ciblez un manga depuis son album !
 
-💎 Six raretés, de commune à légendaire, avec une rare ou mieux garantie par booster. Les taux et garanties sont consultables dans /info.
+💎 Six raretés, de commune à mythique, avec une rare ou mieux garantie par booster. Les taux et garanties sont consultables dans /info.
 
 🌌 **Mythique** : orbites roses et violettes !
 👑 **Légendaire** : rayons dorés et couronne !
